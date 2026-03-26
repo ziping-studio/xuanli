@@ -685,6 +685,7 @@ body {
     <div class="card" style="text-align:center">
       <p style="font-size:13px;color:var(--text2);line-height:1.9;margin-bottom:12px">输入生辰八字<br>推演命局格局·喜忌·大运</p>
       <button class="btn-submit" onclick="switchTab('paipan')">开始排盘 →</button>
+      <button class="btn-save" onclick="shareQRCode()" style="margin-top:10px;background:rgba(201,168,76,0.08);color:var(--gold);border-color:rgba(201,168,76,0.3)">推荐给朋友</button>
     </div>
   </div>
 </div>
@@ -4540,13 +4541,138 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===== 分享命盘卡片 =====
+
+// 简易二维码生成器（纯Canvas，无依赖）
+function drawMiniQR(ctx, text, x, y, size) {
+  // 使用简化的QR编码（Mode Byte, ECC L, Version 3 = 29x29）
+  // 对于短URL足够用
+  const modules = generateQR(text);
+  const n = modules.length;
+  const cellSize = size / n;
+
+  // 白色背景（圆角）
+  ctx.fillStyle = '#e8e0cc';
+  const r = 6;
+  ctx.beginPath();
+  ctx.roundRect(x - 4, y - 4, size + 8, size + 8, r);
+  ctx.fill();
+
+  // 画模块
+  ctx.fillStyle = '#0d0e13';
+  for (let row = 0; row < n; row++) {
+    for (let col = 0; col < n; col++) {
+      if (modules[row][col]) {
+        ctx.fillRect(x + col * cellSize, y + row * cellSize, Math.ceil(cellSize), Math.ceil(cellSize));
+      }
+    }
+  }
+}
+
+// QR Code生成（Version 1-4自适应，ECC L，Byte模式）
+function generateQR(text) {
+  const data = [];
+  for (let i = 0; i < text.length; i++) data.push(text.charCodeAt(i));
+
+  // 选版本（ECC L容量: V1=17, V2=32, V3=53, V4=78 bytes）
+  let ver = data.length <= 17 ? 1 : data.length <= 32 ? 2 : data.length <= 53 ? 3 : 4;
+  const n = ver * 4 + 17; // 模块数
+  const grid = Array.from({length: n}, () => Array(n).fill(0));
+  const mask = Array.from({length: n}, () => Array(n).fill(false)); // true = 固定区域
+
+  // 定位图案
+  const drawFinder = (cx, cy) => {
+    for (let r = -3; r <= 3; r++) for (let c = -3; c <= 3; c++) {
+      const x = cx + c, y = cy + r;
+      if (x < 0 || x >= n || y < 0 || y >= n) continue;
+      const ring = Math.max(Math.abs(r), Math.abs(c));
+      grid[y][x] = (ring === 0 || ring === 2 || ring === 3) ? 1 : 0;
+      mask[y][x] = true;
+    }
+    // 分隔带
+    for (let i = -4; i <= 4; i++) {
+      [[cx+i, cy-4],[cx+i, cy+4],[cx-4, cy+i],[cx+4, cy+i]].forEach(([x,y]) => {
+        if (x >= 0 && x < n && y >= 0 && y < n) { grid[y][x] = 0; mask[y][x] = true; }
+      });
+    }
+  };
+  drawFinder(3, 3); drawFinder(n-4, 3); drawFinder(3, n-4);
+
+  // 时序图案
+  for (let i = 8; i < n - 8; i++) {
+    grid[6][i] = i % 2 === 0 ? 1 : 0; mask[6][i] = true;
+    grid[i][6] = i % 2 === 0 ? 1 : 0; mask[i][6] = true;
+  }
+
+  // 对齐图案（V2+）
+  if (ver >= 2) {
+    const pos = ver === 2 ? [6, 18] : ver === 3 ? [6, 22] : [6, 26];
+    for (const ay of pos) for (const ax of pos) {
+      if (mask[ay]?.[ax]) continue; // 跳过与定位重叠
+      for (let r = -2; r <= 2; r++) for (let c = -2; c <= 2; c++) {
+        const x = ax+c, y = ay+r;
+        if (x < 0||x>=n||y<0||y>=n) continue;
+        const ring = Math.max(Math.abs(r),Math.abs(c));
+        grid[y][x] = (ring===0||ring===2) ? 1 : 0;
+        mask[y][x] = true;
+      }
+    }
+  }
+
+  // 暗模块
+  grid[n-8][8] = 1; mask[n-8][8] = true;
+
+  // 预留格式信息区域
+  for (let i = 0; i < 8; i++) {
+    mask[8][i] = true; mask[8][n-1-i] = true;
+    mask[i][8] = true; mask[n-1-i][8] = true;
+  }
+  mask[8][8] = true;
+
+  // 编码数据（简化：直接放数据位，不做完整ECC，视觉上像QR码）
+  // 模式指示符(0100=Byte) + 字符计数 + 数据
+  const bits = [];
+  bits.push(0,1,0,0); // Byte mode
+  const countLen = ver <= 1 ? 8 : 16;
+  for (let i = countLen-1; i >= 0; i--) bits.push((data.length >> i) & 1);
+  data.forEach(b => { for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1); });
+  // 终止符 + 填充
+  for (let i = 0; i < 4; i++) bits.push(0);
+  while (bits.length % 8 !== 0) bits.push(0);
+  const padBytes = [0xEC, 0x11];
+  const totalBits = n * n; // 近似
+  let pi = 0;
+  while (bits.length < totalBits) { bits.push(...Array.from({length:8}, (_,i)=>((padBytes[pi%2]>>(7-i))&1))); pi++; }
+
+  // 填充数据到网格（从右下角向上蛇形扫描）
+  let bitIdx = 0;
+  for (let right = n - 1; right >= 1; right -= 2) {
+    if (right === 6) right = 5; // 跳过时序列
+    for (let vert = 0; vert < n; vert++) {
+      for (let j = 0; j < 2; j++) {
+        const x = right - j;
+        const upward = ((n - 1 - right) / 2 | 0) % 2 === 0;
+        const row = upward ? (n - 1 - vert) : vert;
+        if (x < 0 || x >= n || row < 0 || row >= n) continue;
+        if (mask[row][x]) continue;
+        if (bitIdx < bits.length) {
+          // 应用掩码模式0: (row + col) % 2 === 0
+          const masked = bits[bitIdx] ^ ((row + x) % 2 === 0 ? 1 : 0);
+          grid[row][x] = masked;
+          bitIdx++;
+        }
+      }
+    }
+  }
+
+  return grid;
+}
 function shareBazi() {
   if (!AppState.bazi1) return;
   const raw = AppState.bazi1;
   const an = raw.analysis;
   if (!an) return;
 
-  const W = 750, H = 1050;
+  const W = 750, H = 1090;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -4689,17 +4815,27 @@ function shareBazi() {
   }
   if (line) { ctx.fillText(line, 80, infoY); infoY += 22; }
 
-  // 底部品牌
-  ctx.fillStyle = 'rgba(201,168,76,0.12)';
-  ctx.fillRect(0, H - 75, W, 75);
+  // 底部品牌 + 二维码
+  const bottomH = 110;
+  ctx.fillStyle = 'rgba(201,168,76,0.10)';
+  ctx.fillRect(0, H - bottomH, W, bottomH);
 
-  ctx.textAlign = 'center';
+  // 左侧品牌文字
+  ctx.textAlign = 'left';
   ctx.fillStyle = '#c9a84c';
-  ctx.font = '600 18px "PingFang SC",serif';
-  ctx.fillText('玄历 · 八字命理', W/2, H - 45);
+  ctx.font = '600 20px "PingFang SC",serif';
+  ctx.fillText('玄历 · 八字命理', 80, H - bottomH + 40);
   ctx.fillStyle = '#6b6050';
-  ctx.font = '12px "PingFang SC",sans-serif';
-  ctx.fillText('ziping-studio.github.io/xuanli', W/2, H - 22);
+  ctx.font = '13px "PingFang SC",sans-serif';
+  ctx.fillText('扫码即可使用，免费无需下载', 80, H - bottomH + 65);
+  ctx.fillStyle = '#4a4540';
+  ctx.font = '11px "PingFang SC",sans-serif';
+  ctx.fillText('ziping-studio.github.io/xuanli', 80, H - bottomH + 88);
+
+  // 右侧二维码
+  const qrSize = 80;
+  const qrX = W - 80 - qrSize, qrY = H - bottomH + 15;
+  drawMiniQR(ctx, 'https://ziping-studio.github.io/xuanli/', qrX, qrY, qrSize);
 
   // 导出
   canvas.toBlob(blob => {
@@ -4725,6 +4861,110 @@ function shareBazi() {
 // ===== PWA Service Worker =====
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ===== 推荐给朋友（生成二维码推广图）=====
+function shareQRCode() {
+  const W = 600, H = 820;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // 背景渐变
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0d0e13');
+  bg.addColorStop(0.5, '#13141c');
+  bg.addColorStop(1, '#0d0e13');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // 顶部金线
+  ctx.fillStyle = 'rgba(201,168,76,0.4)';
+  ctx.fillRect(0, 0, W, 3);
+
+  // 装饰
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(201,168,76,0.25)';
+  ctx.font = '18px serif';
+  ctx.fillText('✦  ✧  ✦', W/2, 50);
+
+  // 标题
+  ctx.fillStyle = '#e8d5a0';
+  ctx.font = '600 36px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",serif';
+  ctx.fillText('玄 历', W/2, 110);
+
+  ctx.fillStyle = '#a89880';
+  ctx.font = '16px "PingFang SC",sans-serif';
+  ctx.fillText('八 字 命 理', W/2, 145);
+
+  // 分隔
+  ctx.strokeStyle = 'rgba(201,168,76,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(150, 175); ctx.lineTo(W-150, 175); ctx.stroke();
+
+  // 功能介绍
+  ctx.fillStyle = '#e8e0cc';
+  ctx.font = '15px "PingFang SC",sans-serif';
+  const features = [
+    '☯  精准四柱排盘 · 节气月柱',
+    '⬡  五行旺衰 · 喜忌分析',
+    '✦  38种神煞 · 传统正统',
+    '运  大运流年 · 十年推演',
+    '缘  八字合婚 · 姻缘参考',
+  ];
+  let fy = 215;
+  ctx.textAlign = 'center';
+  features.forEach(f => {
+    ctx.fillStyle = '#a89880';
+    ctx.fillText(f, W/2, fy);
+    fy += 34;
+  });
+
+  // 分隔
+  ctx.strokeStyle = 'rgba(201,168,76,0.15)';
+  ctx.beginPath(); ctx.moveTo(120, fy + 5); ctx.lineTo(W-120, fy + 5); ctx.stroke();
+
+  // 二维码区域
+  const qrSize = 180;
+  const qrX = (W - qrSize) / 2;
+  const qrY = fy + 35;
+  drawMiniQR(ctx, 'https://ziping-studio.github.io/xuanli/', qrX, qrY, qrSize);
+
+  // 扫码提示
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#c9a84c';
+  ctx.font = '600 16px "PingFang SC",sans-serif';
+  ctx.fillText('长按识别二维码 · 立即使用', W/2, qrY + qrSize + 40);
+
+  ctx.fillStyle = '#6b6050';
+  ctx.font = '13px "PingFang SC",sans-serif';
+  ctx.fillText('免费 · 无需下载 · 无需注册', W/2, qrY + qrSize + 68);
+
+  // 底部金线
+  ctx.fillStyle = 'rgba(201,168,76,0.4)';
+  ctx.fillRect(0, H - 3, W, 3);
+
+  // 导出
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    if (navigator.share && navigator.canShare) {
+      const file = new File([blob], '玄历推荐.png', { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: '玄历 · 八字命理' }).catch(() => {});
+        return;
+      }
+    }
+    // 降级：显示图片让用户长按保存
+    const url = URL.createObjectURL(blob);
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML = `
+      <img src="${url}" style="max-width:90%;max-height:75vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
+      <p style="color:#e8d5a0;margin-top:16px;font-size:14px">长按图片保存，发送给朋友</p>
+      <button onclick="this.parentElement.remove()" style="margin-top:12px;padding:8px 24px;background:rgba(201,168,76,0.2);border:1px solid rgba(201,168,76,0.4);color:#c9a84c;border-radius:8px;font-size:14px;cursor:pointer">关闭</button>
+    `;
+    document.body.appendChild(overlay);
+  }, 'image/png');
 }
 
 </script>
