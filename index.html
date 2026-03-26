@@ -4544,16 +4544,7 @@ window.addEventListener('DOMContentLoaded', () => {
 function exportShareImage(canvas, filename) {
   canvas.toBlob(blob => {
     if (!blob) return;
-    // 微信内置浏览器不走 navigator.share（会闪退）
-    const isWechat = /MicroMessenger/i.test(navigator.userAgent);
-    if (!isWechat && navigator.share && navigator.canShare) {
-      const file = new File([blob], filename, { type: 'image/png' });
-      if (navigator.canShare({ files: [file] })) {
-        navigator.share({ files: [file], title: '玄历 · 八字命理' }).catch(() => {});
-        return;
-      }
-    }
-    // 弹出图片让用户长按保存
+    // 统一弹出图片浮层，用户长按保存后自行发送
     const url = URL.createObjectURL(blob);
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
