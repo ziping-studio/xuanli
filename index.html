@@ -4672,6 +4672,16 @@ function shareBazi() {
   const an = raw.analysis;
   if (!an) return;
 
+  // 先加载二维码
+  const siteUrl = 'https://ziping-studio.github.io/xuanli/';
+  const qrImg = new Image();
+  qrImg.crossOrigin = 'anonymous';
+  qrImg.onload = () => renderBaziCard(raw, an, qrImg);
+  qrImg.onerror = () => renderBaziCard(raw, an, null); // 无二维码也能生成
+  qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=6&data=${encodeURIComponent(siteUrl)}`;
+}
+
+function renderBaziCard(raw, an, qrImg) {
   const W = 750, H = 1090;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -4832,10 +4842,16 @@ function shareBazi() {
   ctx.font = '11px "PingFang SC",sans-serif';
   ctx.fillText('ziping-studio.github.io/xuanli', 80, H - bottomH + 88);
 
-  // 右侧二维码
-  const qrSize = 80;
-  const qrX = W - 80 - qrSize, qrY = H - bottomH + 15;
-  drawMiniQR(ctx, 'https://ziping-studio.github.io/xuanli/', qrX, qrY, qrSize);
+  // 右侧二维码（真实QR图片）
+  if (qrImg) {
+    const qrSize = 80;
+    const qrX = W - 80 - qrSize, qrY = H - bottomH + 15;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(qrX - 4, qrY - 4, qrSize + 8, qrSize + 8, 5);
+    ctx.fill();
+    ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+  }
 
   // 导出
   canvas.toBlob(blob => {
@@ -4865,6 +4881,25 @@ if ('serviceWorker' in navigator) {
 
 // ===== 推荐给朋友（生成二维码推广图）=====
 function shareQRCode() {
+  const siteUrl = 'https://ziping-studio.github.io/xuanli/';
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(siteUrl)}`;
+  
+  // 先加载二维码图片
+  const qrImg = new Image();
+  qrImg.crossOrigin = 'anonymous';
+  qrImg.onload = () => renderShareCard(qrImg);
+  qrImg.onerror = () => {
+    // API不可用时用备用API
+    const qrImg2 = new Image();
+    qrImg2.crossOrigin = 'anonymous';
+    qrImg2.onload = () => renderShareCard(qrImg2);
+    qrImg2.onerror = () => { showToast('二维码加载失败，请检查网络'); };
+    qrImg2.src = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(siteUrl)}`;
+  };
+  qrImg.src = qrApiUrl;
+}
+
+function renderShareCard(qrImg) {
   const W = 600, H = 820;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -4892,7 +4927,6 @@ function shareQRCode() {
   ctx.fillStyle = '#e8d5a0';
   ctx.font = '600 36px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",serif';
   ctx.fillText('玄 历', W/2, 110);
-
   ctx.fillStyle = '#a89880';
   ctx.font = '16px "PingFang SC",sans-serif';
   ctx.fillText('八 字 命 理', W/2, 145);
@@ -4903,8 +4937,6 @@ function shareQRCode() {
   ctx.beginPath(); ctx.moveTo(150, 175); ctx.lineTo(W-150, 175); ctx.stroke();
 
   // 功能介绍
-  ctx.fillStyle = '#e8e0cc';
-  ctx.font = '15px "PingFang SC",sans-serif';
   const features = [
     '☯  精准四柱排盘 · 节气月柱',
     '⬡  五行旺衰 · 喜忌分析',
@@ -4916,6 +4948,7 @@ function shareQRCode() {
   ctx.textAlign = 'center';
   features.forEach(f => {
     ctx.fillStyle = '#a89880';
+    ctx.font = '15px "PingFang SC",sans-serif';
     ctx.fillText(f, W/2, fy);
     fy += 34;
   });
@@ -4924,21 +4957,27 @@ function shareQRCode() {
   ctx.strokeStyle = 'rgba(201,168,76,0.15)';
   ctx.beginPath(); ctx.moveTo(120, fy + 5); ctx.lineTo(W-120, fy + 5); ctx.stroke();
 
-  // 二维码区域
-  const qrSize = 180;
+  // 二维码（真实QR图片）
+  const qrSize = 200;
   const qrX = (W - qrSize) / 2;
-  const qrY = fy + 35;
-  drawMiniQR(ctx, 'https://ziping-studio.github.io/xuanli/', qrX, qrY, qrSize);
+  const qrY = fy + 30;
+  // 白色圆角背景
+  ctx.fillStyle = '#ffffff';
+  const pad = 10;
+  ctx.beginPath();
+  ctx.roundRect(qrX - pad, qrY - pad, qrSize + pad*2, qrSize + pad*2, 10);
+  ctx.fill();
+  // 画二维码
+  ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
   // 扫码提示
   ctx.textAlign = 'center';
   ctx.fillStyle = '#c9a84c';
   ctx.font = '600 16px "PingFang SC",sans-serif';
-  ctx.fillText('长按识别二维码 · 立即使用', W/2, qrY + qrSize + 40);
-
+  ctx.fillText('长按识别二维码 · 立即使用', W/2, qrY + qrSize + 45);
   ctx.fillStyle = '#6b6050';
   ctx.font = '13px "PingFang SC",sans-serif';
-  ctx.fillText('免费 · 无需下载 · 无需注册', W/2, qrY + qrSize + 68);
+  ctx.fillText('免费 · 无需下载 · 无需注册', W/2, qrY + qrSize + 73);
 
   // 底部金线
   ctx.fillStyle = 'rgba(201,168,76,0.4)';
@@ -4954,7 +4993,6 @@ function shareQRCode() {
         return;
       }
     }
-    // 降级：显示图片让用户长按保存
     const url = URL.createObjectURL(blob);
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
