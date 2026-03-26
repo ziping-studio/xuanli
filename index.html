@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="theme-color" content="#0d0e13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="玄历">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>玄历 · 八字命理</title>
 <style>
 
@@ -763,6 +769,7 @@ body {
         <div class="analysis-text" id="res-health"></div>
       </div>
       <button class="btn-save" onclick="saveBazi()">✦ 保存此命盘</button>
+      <button class="btn-save" onclick="shareBazi()" style="background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.08));color:var(--gold2);border-color:var(--gold)">✦ 分享命盘卡片</button>
       <div class="card" id="saved-panel-card" style="display:none">
         <div class="card-title">已保存命盘 <span id="saved-count" style="color:var(--text3);font-size:11px;font-weight:normal"></span></div>
         <div id="saved-list"></div>
@@ -4531,6 +4538,194 @@ window.addEventListener('DOMContentLoaded', () => {
     if (p.id !== 'page-index') p.style.display = 'none';
   });
 });
+
+// ===== 分享命盘卡片 =====
+function shareBazi() {
+  if (!AppState.bazi1) return;
+  const raw = AppState.bazi1;
+  const an = raw.analysis;
+  if (!an) return;
+
+  const W = 750, H = 1050;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // 背景
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, '#0d0e13');
+  bgGrad.addColorStop(1, '#13141c');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 顶部金色边线
+  ctx.fillStyle = 'rgba(201,168,76,0.3)';
+  ctx.fillRect(0, 0, W, 3);
+
+  // 标题
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e8d5a0';
+  ctx.font = '600 28px "PingFang SC","Hiragino Sans GB","Microsoft YaHei",serif';
+  ctx.fillText('玄 历 · 八字命理', W/2, 55);
+
+  // 命主信息
+  ctx.fillStyle = '#a89880';
+  ctx.font = '16px "PingFang SC",sans-serif';
+  const nameStr = (raw.name || '未署名') + '　' + (raw.gender || '') + '命';
+  ctx.fillText(nameStr, W/2, 95);
+
+  // 装饰线
+  ctx.strokeStyle = 'rgba(201,168,76,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(100, 115); ctx.lineTo(W-100, 115); ctx.stroke();
+
+  // 四柱
+  const pillars = ['year','month','day','hour'];
+  const labels = ['年柱','月柱','日柱','时柱'];
+  const wxColors = {'木':'#7ecf7e','火':'#ff7755','土':'#d4a040','金':'#c8c8dc','水':'#70aaff'};
+  const startX = 95, gap = (W - 190) / 4;
+
+  // 柱标签
+  ctx.font = '13px "PingFang SC",sans-serif';
+  ctx.fillStyle = '#6b6050';
+  labels.forEach((l, i) => {
+    ctx.fillText(l, startX + i * gap + gap/2, 148);
+  });
+
+  // 十神
+  ctx.font = '14px "PingFang SC",sans-serif';
+  pillars.forEach((p, i) => {
+    const ss = p === 'day' ? '日元' : (raw[p].tgSS || '');
+    ctx.fillStyle = p === 'day' ? '#c9a84c' : '#a89880';
+    ctx.fillText(ss, startX + i * gap + gap/2, 178);
+  });
+
+  // 天干大字
+  ctx.font = '600 42px "PingFang SC","Hiragino Sans GB",serif';
+  pillars.forEach((p, i) => {
+    const tgWx = TG_WX[raw[p].tg] || '土';
+    ctx.fillStyle = wxColors[tgWx] || '#d4a040';
+    ctx.fillText(raw[p].tg, startX + i * gap + gap/2, 235);
+  });
+
+  // 地支大字
+  pillars.forEach((p, i) => {
+    const dzWx = DZ_BEN[raw[p].dz] || '土';
+    ctx.fillStyle = wxColors[dzWx] || '#d4a040';
+    ctx.fillText(raw[p].dz, startX + i * gap + gap/2, 300);
+  });
+
+  // 分隔线
+  ctx.strokeStyle = 'rgba(201,168,76,0.2)';
+  ctx.beginPath(); ctx.moveTo(60, 325); ctx.lineTo(W-60, 325); ctx.stroke();
+
+  // 格局信息
+  ctx.textAlign = 'left';
+  ctx.font = '15px "PingFang SC",sans-serif';
+  let infoY = 365;
+
+  const drawInfoRow = (label, value, color) => {
+    ctx.fillStyle = '#6b6050';
+    ctx.fillText(label, 80, infoY);
+    ctx.fillStyle = color || '#e8e0cc';
+    ctx.fillText(value, 160, infoY);
+    infoY += 36;
+  };
+
+  drawInfoRow('日主', `${raw.day.tg}（${raw.dayMasterWx}）`, wxColors[raw.dayMasterWx]);
+  drawInfoRow('旺衰', `${raw.qiangRuo}（${raw.qiangRuoRatio}%）`, '#e8e0cc');
+  drawInfoRow('格局', an.gejv || '', '#c9a84c');
+
+  // 喜忌
+  infoY += 8;
+  const drawTags = (label, tags, bgColor, textColor) => {
+    ctx.fillStyle = '#6b6050';
+    ctx.font = '14px "PingFang SC",sans-serif';
+    ctx.fillText(label, 80, infoY);
+    let tx = 160;
+    (tags || []).forEach(w => {
+      // 标签背景
+      const tw = ctx.measureText(w).width + 20;
+      ctx.fillStyle = bgColor;
+      ctx.beginPath();
+      const r = 12;
+      ctx.roundRect(tx - 10, infoY - 16, tw, 26, r);
+      ctx.fill();
+      // 文字
+      ctx.fillStyle = textColor;
+      ctx.fillText(w, tx, infoY);
+      tx += tw + 8;
+    });
+    infoY += 40;
+  };
+
+  drawTags('喜神', an.xi, 'rgba(126,207,158,0.2)', '#7ecf9e');
+  drawTags('忌神', an.ji, 'rgba(255,119,85,0.15)', '#ff7755');
+
+  // 命局分析摘要（性格）
+  infoY += 10;
+  ctx.strokeStyle = 'rgba(201,168,76,0.15)';
+  ctx.beginPath(); ctx.moveTo(60, infoY - 15); ctx.lineTo(W-60, infoY - 15); ctx.stroke();
+
+  ctx.fillStyle = '#c9a84c';
+  ctx.font = '14px "PingFang SC",sans-serif';
+  ctx.fillText('性格特质', 80, infoY + 5);
+  infoY += 30;
+
+  // 自动换行绘制
+  ctx.fillStyle = '#a89880';
+  ctx.font = '13px "PingFang SC",sans-serif';
+  const charText = (an.character || '').substring(0, 120) + (an.character && an.character.length > 120 ? '...' : '');
+  const maxLineW = W - 160;
+  let line = '';
+  for (let ch of charText) {
+    if (ctx.measureText(line + ch).width > maxLineW) {
+      ctx.fillText(line, 80, infoY);
+      infoY += 22;
+      line = ch;
+    } else {
+      line += ch;
+    }
+  }
+  if (line) { ctx.fillText(line, 80, infoY); infoY += 22; }
+
+  // 底部品牌
+  ctx.fillStyle = 'rgba(201,168,76,0.12)';
+  ctx.fillRect(0, H - 75, W, 75);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#c9a84c';
+  ctx.font = '600 18px "PingFang SC",serif';
+  ctx.fillText('玄历 · 八字命理', W/2, H - 45);
+  ctx.fillStyle = '#6b6050';
+  ctx.font = '12px "PingFang SC",sans-serif';
+  ctx.fillText('ziping-studio.github.io/xuanli', W/2, H - 22);
+
+  // 导出
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    // 尝试原生分享（移动端）
+    if (navigator.share && navigator.canShare) {
+      const file = new File([blob], '玄历命盘.png', { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: '玄历 · 八字命理' }).catch(() => {});
+        return;
+      }
+    }
+    // 降级：直接下载
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = '玄历命盘.png';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('卡片已保存，可分享到朋友圈');
+  }, 'image/png');
+}
+
+// ===== PWA Service Worker =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
 
 </script>
 </body>
