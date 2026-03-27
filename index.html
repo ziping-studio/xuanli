@@ -3493,7 +3493,20 @@ function doPaipan() {
     } catch(e) { alert('农历日期无效'); return; }
   } else {
     solarYear = year; solarMonth = monthIdx + 1; solarDay = dayIdx + 1;
+    solarStr = `${solarYear}年${solarMonth}月${solarDay}日`;
+    // 公历转农历
+    try {
+      const lunar = solar2Lunar(solarYear, solarMonth, solarDay);
+      lunarStr = `${lunar.year}年${lunar.isLeap?'闰':''}${LUNAR_MONTHS_SHORT[lunar.month-1]}${LUNAR_DAYS[lunar.day-1]}`;
+    } catch(e) { /* 转换失败不影响排盘 */ }
   }
+
+  // 记住输入（下次打开自动填充）
+  try {
+    localStorage.setItem('xuanli_last_input', JSON.stringify({
+      year, monthIdx, dayIdx, hourIdx, name, gender, calType: currentCalType
+    }));
+  } catch(e) {}
 
   const hour = HOURS[hourIdx].val;
   const raw = paipan(solarYear, solarMonth, solarDay, hour, gender);
@@ -4719,6 +4732,19 @@ window.addEventListener('DOMContentLoaded', () => {
   initToday();
   renderSavedList();
   renderSavedListIndex();
+  // 恢复上次输入
+  try {
+    const last = JSON.parse(localStorage.getItem('xuanli_last_input') || 'null');
+    if (last) {
+      if (last.year) document.getElementById('pp-year').value = last.year;
+      if (last.monthIdx !== undefined) document.getElementById('pp-month').value = last.monthIdx;
+      if (last.dayIdx !== undefined) document.getElementById('pp-day').value = last.dayIdx;
+      if (last.hourIdx !== undefined) document.getElementById('pp-hour').value = last.hourIdx;
+      if (last.name) document.getElementById('pp-name').value = last.name;
+      if (last.gender) setGender(last.gender);
+      if (last.calType && last.calType !== 'solar') setCalType(last.calType);
+    }
+  } catch(e) {}
   // 隐藏除首页外的页面
   document.querySelectorAll('.page').forEach(p => {
     if (p.id !== 'page-index') p.style.display = 'none';
