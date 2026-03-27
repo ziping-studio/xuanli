@@ -1544,7 +1544,7 @@ function analyzeHepan(bazi1, bazi2) {
     }
   }
 
-  // ── 4. 夫妻宫（男看财，女看官）──
+  // ── 4. 夫妻宫十神（男看财，女看官）──
   const manB = bazi1.gender === '男' ? bazi1 : bazi2;
   const womanB = bazi1.gender === '女' ? bazi1 : bazi2;
   if (manB && womanB) {
@@ -1561,6 +1561,98 @@ function analyzeHepan(bazi1, bazi2) {
       score.total += 18; score.details.push({ text: '女命视男命日主为正官，正配之象，婚姻稳固', score: 18, type: 'good' });
     } else if (shishenOfMan === '七杀') {
       score.total += 8; score.details.push({ text: '女命视男命日主为七杀，感情强烈有吸引力', score: 8, type: 'neutral' });
+    }
+  }
+
+  // ── 5. 纳音合婚（年柱纳音五行相生相克）──
+  if (bazi1.year.nayin && bazi2.year.nayin) {
+    const nyWxMap = {};
+    ['金','木','水','火','土'].forEach(w => {
+      ['海中金','剑锋金','白蜡金','沙中金','金箔金','钗钏金'].forEach(n => nyWxMap[n] = '金');
+      ['大林木','杨柳木','松柏木','平地木','桑柘木','石榴木'].forEach(n => nyWxMap[n] = '木');
+      ['涧下水','泉中水','长流水','天河水','大溪水','大海水'].forEach(n => nyWxMap[n] = '水');
+      ['霹雳火','炉中火','覆灯火','天上火','山下火','山头火'].forEach(n => nyWxMap[n] = '火');
+      ['路旁土','城头土','屋上土','壁上土','大驿土','沙中土'].forEach(n => nyWxMap[n] = '土');
+    });
+    const ny1 = nyWxMap[bazi1.year.nayin], ny2 = nyWxMap[bazi2.year.nayin];
+    if (ny1 && ny2) {
+      if (WX_SHENG_H[ny1] === ny2 || WX_SHENG_H[ny2] === ny1) {
+        score.total += 8; score.details.push({ text: `年柱纳音相生（${bazi1.year.nayin}↔${bazi2.year.nayin}），根基和谐`, score: 8, type: 'good' });
+      } else if (ny1 === ny2) {
+        score.total += 5; score.details.push({ text: `年柱纳音相同（${ny1}），性情相近`, score: 5, type: 'good' });
+      } else if (WX_KE_H[ny1] === ny2 || WX_KE_H[ny2] === ny1) {
+        score.total -= 5; score.details.push({ text: `年柱纳音相克（${bazi1.year.nayin}克${bazi2.year.nayin}），根基有碍`, score: -5, type: 'bad' });
+      }
+    }
+  }
+
+  // ── 6. 五行整体互补（看双方八字五行盈缺是否互补）──
+  if (bazi1.wuxingStats && bazi2.wuxingStats) {
+    const wxAll = ['木','火','土','金','水'];
+    const s1 = bazi1.wuxingStats, s2 = bazi2.wuxingStats;
+    const t1 = wxAll.reduce((a,w) => a + (s1[w]||0), 0) || 1;
+    const t2 = wxAll.reduce((a,w) => a + (s2[w]||0), 0) || 1;
+    // 找各自缺失或极弱的五行
+    const weak1 = wxAll.filter(w => (s1[w]||0)/t1 < 0.08);
+    const weak2 = wxAll.filter(w => (s2[w]||0)/t2 < 0.08);
+    // 对方旺的五行刚好补自己缺的
+    const strong1 = wxAll.filter(w => (s1[w]||0)/t1 > 0.25);
+    const strong2 = wxAll.filter(w => (s2[w]||0)/t2 > 0.25);
+    const comp1 = weak1.filter(w => strong2.includes(w)); // 男缺的女旺
+    const comp2 = weak2.filter(w => strong1.includes(w)); // 女缺的男旺
+    const compTotal = comp1.length + comp2.length;
+    if (compTotal >= 3) {
+      score.total += 12; score.details.push({ text: `五行高度互补，双方盈缺相济（互补${compTotal}项），婚后运势互旺`, score: 12, type: 'good' });
+    } else if (compTotal >= 1) {
+      score.total += 6; score.details.push({ text: `五行有互补（${[...comp1,...comp2].join('、')}），能弥补对方不足`, score: 6, type: 'good' });
+    }
+    // 双方都缺同一五行 → 共同短板
+    const bothWeak = weak1.filter(w => weak2.includes(w));
+    if (bothWeak.length > 0) {
+      score.total -= 3; score.details.push({ text: `双方共同缺${bothWeak.join('、')}，此方面需外部补益`, score: -3, type: 'neutral' });
+    }
+  }
+
+  // ── 7. 夫妻星旺衰（男看财星状态，女看官星状态）──
+  if (manB && womanB) {
+    const manDmWx = TG_WX_H[manB.day.tg];
+    const womanDmWx = TG_WX_H[womanB.day.tg];
+    const manCaiWx = WX_KE_H[manDmWx];   // 男命财星五行 = 我克
+    const womanGuanWx = WX_KE_WO_H[womanDmWx]; // 女命官星五行 = 克我
+    // 统计四柱中财星/官星出现次数
+    const countWxInBazi = (bazi, wx) => {
+      let n = 0;
+      ['year','month','day','hour'].forEach(p => {
+        if (TG_WX_H[bazi[p].tg] === wx) n++;
+        const cg = DZ_CG_SCORE[bazi[p].dz];
+        if (cg && cg.length && TG_WX_H[cg[0].tg] === wx) n += 0.5;
+      });
+      return n;
+    };
+    const manCaiCount = countWxInBazi(manB, manCaiWx);
+    const womanGuanCount = countWxInBazi(womanB, womanGuanWx);
+    // 男命财星分析
+    if (manCaiCount >= 2.5) {
+      score.total += 5; score.details.push({ text: '男命财星旺，重视家庭，对婚姻投入度高', score: 5, type: 'good' });
+    } else if (manCaiCount <= 0.5) {
+      score.total -= 3; score.details.push({ text: '男命财星弱，婚姻观念较淡，需主动经营感情', score: -3, type: 'neutral' });
+    }
+    // 女命官星分析
+    if (womanGuanCount >= 2.5) {
+      score.total += 5; score.details.push({ text: '女命官星旺，重视婚姻稳定，对伴侣要求明确', score: 5, type: 'good' });
+    } else if (womanGuanCount <= 0.5) {
+      score.total -= 3; score.details.push({ text: '女命官星弱，对婚姻期待较自由，需双方调适', score: -3, type: 'neutral' });
+    }
+    // 财星/官星混杂检测（正偏混杂 → 感情复杂）
+    const manHasCai = ['year','month','hour'].some(p => getShishen(manB.day.tg, manB[p].tg) === '正财');
+    const manHasPianCai = ['year','month','hour'].some(p => getShishen(manB.day.tg, manB[p].tg) === '偏财');
+    if (manHasCai && manHasPianCai) {
+      score.total -= 4; score.details.push({ text: '男命正偏财混杂，感情生活较复杂，需专一守心', score: -4, type: 'bad' });
+    }
+    const womanHasGuan = ['year','month','hour'].some(p => getShishen(womanB.day.tg, womanB[p].tg) === '正官');
+    const womanHasSha = ['year','month','hour'].some(p => getShishen(womanB.day.tg, womanB[p].tg) === '七杀');
+    if (womanHasGuan && womanHasSha) {
+      score.total -= 4; score.details.push({ text: '女命官杀混杂，感情选择较多，需坚定择一', score: -4, type: 'bad' });
     }
   }
 
