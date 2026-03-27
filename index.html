@@ -4263,7 +4263,7 @@ function renderWuxing() {
   // 横向箭头：根据左→右实际方向确定箭头朝向
   // a=左节点五行, b=右节点五行
   function lkTipH(lk, a, b) {
-    if (lk === 'same') return '→比';
+    if (lk === 'same') return '⇌比';
     if (lk === 'none' || lk === 'gap') return '—';
     if (lk === 'sheng') return WX_SHENG[a] === b ? '→生' : '←生';
     if (lk === 'ke')    return WX_KE[a]    === b ? '→克' : '←克';
@@ -4272,11 +4272,11 @@ function renderWuxing() {
   // 纵向箭头：天干（上）→地支（下）实际方向
   // a=天干五行, b=地支五行
   function lkTipV(lk, a, b) {
-    if (lk === 'same') return '↕比';
-    if (lk === 'none' || lk === 'gap') return '↕';
+    if (lk === 'same') return '⇅比';
+    if (lk === 'none' || lk === 'gap') return '⋮';
     if (lk === 'sheng') return WX_SHENG[a] === b ? '↓生' : '↑生';
     if (lk === 'ke')    return WX_KE[a]    === b ? '↓克' : '↑克';
-    return '↕';
+    return '⋮';
   }
 
   function nodeHtml(n) {
