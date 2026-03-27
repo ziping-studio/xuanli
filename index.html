@@ -941,16 +941,31 @@ body {
   </div>
 </div>
 
+<!-- ===== 添加到桌面引导 ===== -->
+<div id="install-banner" style="display:none;position:fixed;bottom:60px;left:12px;right:12px;background:linear-gradient(135deg,#1a1b26,#13141c);border:1px solid rgba(201,168,76,0.3);border-radius:12px;padding:14px 16px;z-index:199;box-shadow:0 4px 20px rgba(0,0,0,0.5)">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="font-size:28px;flex-shrink:0">☯</div>
+    <div style="flex:1">
+      <div style="font-size:13px;color:var(--gold2);font-weight:600;margin-bottom:3px">添加「玄历」到桌面</div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.5" id="install-hint"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button onclick="doInstallPWA()" id="install-btn" style="display:none;padding:6px 14px;background:linear-gradient(135deg,#8b6914,#c9a84c);border:none;border-radius:7px;color:#0d0e13;font-size:12px;font-weight:600;cursor:pointer">安装</button>
+      <button onclick="dismissInstall()" style="padding:6px 10px;background:none;border:1px solid rgba(201,168,76,0.3);border-radius:7px;color:var(--text3);font-size:11px;cursor:pointer">关闭</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Tab Bar ===== -->
 <div class="tab-bar">
   <div class="tab-item active" id="tab-index"   onclick="switchTab('index')">
     <div class="tab-icon">☯</div><div>首页</div>
   </div>
   <div class="tab-item" id="tab-paipan"  onclick="switchTab('paipan')">
-    <div class="tab-icon">卦</div><div>排盘</div>
+    <div class="tab-icon">盘</div><div>排盘</div>
   </div>
   <div class="tab-item" id="tab-wuxing"  onclick="switchTab('wuxing')">
-    <div class="tab-icon">⬡</div><div>五行</div>
+    <div class="tab-icon">行</div><div>五行</div>
   </div>
   <div class="tab-item" id="tab-dayun"   onclick="switchTab('dayun')">
     <div class="tab-icon">运</div><div>大运</div>
@@ -4877,6 +4892,62 @@ function renderBaziCard(raw, an, qrImg) {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// ===== PWA 安装引导 =====
+let deferredPrompt = null;
+
+// Android Chrome: 拦截 beforeinstallprompt
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // 显示安装按钮
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.display = 'inline-block';
+});
+
+function doInstallPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; dismissInstall(); });
+  }
+}
+
+function dismissInstall() {
+  const banner = document.getElementById('install-banner');
+  if (banner) banner.style.display = 'none';
+  try { localStorage.setItem('xuanli_install_dismissed', '1'); } catch(e) {}
+}
+
+// 首次访问且非PWA模式时显示引导
+(function showInstallBanner() {
+  // 已经是PWA模式（standalone）则不显示
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  if (navigator.standalone === true) return; // iOS Safari
+  // 已经关闭过则不显示
+  try { if (localStorage.getItem('xuanli_install_dismissed')) return; } catch(e) {}
+
+  const banner = document.getElementById('install-banner');
+  const hint = document.getElementById('install-hint');
+  if (!banner || !hint) return;
+
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua);
+  const isAndroid = /Android/.test(ua);
+  const isWechat = /MicroMessenger/i.test(ua);
+
+  if (isWechat) {
+    hint.textContent = '请点击右上角 ··· → 用浏览器打开，再添加到桌面';
+  } else if (isIOS) {
+    hint.innerHTML = '点底部 <span style="font-size:15px">⬆</span> 分享 → 「添加到主屏幕」';
+  } else if (isAndroid) {
+    hint.textContent = '点击「安装」或浏览器菜单 → 添加到主屏幕';
+  } else {
+    hint.textContent = '在浏览器中可添加为桌面应用';
+  }
+
+  // 延迟2秒显示，避免页面加载时干扰
+  setTimeout(() => { banner.style.display = 'block'; }, 2000);
+})();
 
 // ===== 推荐给朋友（生成二维码推广图）=====
 function shareQRCode() {
