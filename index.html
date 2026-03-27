@@ -4937,12 +4937,14 @@ function dismissInstall() {
 
   if (isWechat) {
     hint.textContent = '请点击右上角 ··· → 用浏览器打开，再添加到桌面';
+  } else if (isIOS && /CriOS/.test(ua)) {
+    hint.textContent = '点右上角 ··· → 向下滑动 → 点「添加到主屏幕」';
   } else if (isIOS) {
-    hint.innerHTML = '点底部 <span style="font-size:15px">⬆</span> 分享 → 「添加到主屏幕」';
+    hint.innerHTML = '点Safari右下角 <span style="font-size:15px">⬆</span> 共享 → 向下滑动 → 点「添加到主屏幕」';
   } else if (isAndroid) {
-    hint.textContent = '点击「安装」或浏览器菜单 → 添加到主屏幕';
+    hint.textContent = '点击「安装」按钮，或点浏览器右上角 ⋮ → 添加到主屏幕';
   } else {
-    hint.textContent = '在浏览器中可添加为桌面应用';
+    hint.textContent = '点浏览器菜单 → 添加到主屏幕，像App一样使用';
   }
 
   // 延迟2秒显示，避免页面加载时干扰
