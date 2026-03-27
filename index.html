@@ -676,7 +676,17 @@ body {
           <div class="today-tg" id="today-day-tg">—</div>
           <div class="today-dz" id="today-day-dz">—</div>
         </div>
+        <div class="today-pillar">
+          <div class="today-pillar-label" id="today-hour-label">时</div>
+          <div class="today-tg" id="today-hour-tg">—</div>
+          <div class="today-dz" id="today-hour-dz">—</div>
+        </div>
       </div>
+    </div>
+    <div class="card" id="daily-tip-card" style="text-align:center">
+      <div style="font-size:11px;color:var(--text3);letter-spacing:2px;margin-bottom:8px">每 日 一 签</div>
+      <div style="font-size:14px;color:var(--gold2);line-height:1.9;padding:0 10px" id="daily-tip"></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:8px" id="daily-tip-src"></div>
     </div>
     <div class="card" id="saved-panel-index" style="display:none">
       <div class="card-title">已保存命盘 <span id="saved-count-index" style="color:var(--text3);font-size:11px;font-weight:normal"></span></div>
@@ -4585,6 +4595,7 @@ function initToday() {
   const yp = getYearPillar(y);
   const mp = getMonthPillar(y, m, d, h);
   const dp = getDayPillar(y, m, d);
+  const hp = getHourPillar(dp.tgIndex, h);
   const setCell = (tgId, dzId, tg, dz) => {
     const tw = TG_WX[tg]||'土', dw = DZ_BEN[dz]||'土';
     const te = el(tgId), de = el(dzId);
@@ -4594,7 +4605,74 @@ function initToday() {
   setCell('today-year-tg','today-year-dz', yp.tg, yp.dz);
   setCell('today-month-tg','today-month-dz', mp.tg, mp.dz);
   setCell('today-day-tg','today-day-dz', dp.tg, dp.dz);
+  setCell('today-hour-tg','today-hour-dz', hp.tg, hp.dz);
+
+  // 时辰标签（显示当前时辰名）
+  const dzNames = {子:'子时',丑:'丑时',寅:'寅时',卯:'卯时',辰:'辰时',巳:'巳时',午:'午时',未:'未时',申:'申时',酉:'酉时',戌:'戌时',亥:'亥时'};
+  const hlEl = el('today-hour-label');
+  if (hlEl) hlEl.textContent = dzNames[hp.dz] || '时';
+
+  // 今日宜忌（基于日柱五行）
+  const dayWx = TG_WX[dp.tg] || '土';
+  const dayDzWx = DZ_BEN[DIZHI[dp.dzIndex]] || '土';
+  const yijiData = {
+    '木': { yi:'求学进修、创业规划、植树园艺、拜访贵人', ji:'金属手术、伐木砍削、过度劳碌' },
+    '火': { yi:'谈判签约、社交宴请、表白示爱、竞技比赛', ji:'近水活动、阴暗独处、冷战冷暴力' },
+    '土': { yi:'置业购房、储蓄理财、修缮装修、调养身心', ji:'冒险投机、长途奔波、轻率决策' },
+    '金': { yi:'决断大事、清理整顿、维权交涉、健身锻炼', ji:'意气用事、借贷担保、感情冲动' },
+    '水': { yi:'学习思考、旅行出游、灵感创作、人脉拓展', ji:'冲动消费、高空涉险、口舌是非' },
+  };
+  const yiji = yijiData[dayWx] || yijiData['土'];
+  const yiEl = el('today-yi'), jiEl = el('today-ji');
+  if (yiEl) yiEl.textContent = yiji.yi;
+  if (jiEl) jiEl.textContent = yiji.ji;
+
+  // 每日一签（基于日期确定，每天固定）
+  const tips = [
+    { text: '木秀于林，风必摧之；行高于人，众必非之。', src: '——《运命论》' },
+    { text: '一命二运三风水，四积阴德五读书。', src: '——民间谚语' },
+    { text: '太极生两仪，两仪生四象，四象生八卦。', src: '——《周易》' },
+    { text: '天行健，君子以自强不息；地势坤，君子以厚德载物。', src: '——《周易》' },
+    { text: '穷通由命，苦乐在心，知命者不怨天，知己者不尤人。', src: '——《荀子》' },
+    { text: '五行相生相克，万物生生不息，此天地之道也。', src: '——《黄帝内经》' },
+    { text: '日主旺者宜泄，弱者宜扶，此用神之大法。', src: '——《子平真诠》' },
+    { text: '财官印食，各有所喜；冲合刑害，吉凶分明。', src: '——《渊海子平》' },
+    { text: '命虽由天定，运可由己造。积善之家，必有余庆。', src: '——《易经》' },
+    { text: '格局清纯者贵，浊乱者贱，此论命之纲领。', src: '——《三命通会》' },
+    { text: '相由心生，运随心转，心正则运正。', src: '——佛家偈语' },
+    { text: '官清印正身自贵，财旺食丰禄自来。', src: '——《滴天髓》' },
+    { text: '身强喜克泄耗，身弱宜生扶助，此平衡之理。', src: '——《穷通宝鉴》' },
+    { text: '天有不测风云，人有旦夕祸福。知命者，善待每一天。', src: '——《增广贤文》' },
+    { text: '阴阳消长，五行流转，顺之者昌，逆之者亡。', src: '——《素问》' },
+    { text: '吉凶悔吝，生乎动者也。静观其变，动察其机。', src: '——《周易》' },
+    { text: '有福之人不用忙，无福之人跑断肠。修心养性，自有天佑。', src: '——民间谚语' },
+    { text: '用神得力，一生顺遂；用神无力，诸事蹉跎。', src: '——《子平真诠》' },
+    { text: '印绶生身似慈母，食神制杀如良将。', src: '——《渊海子平》' },
+    { text: '大运十年一变，流年岁岁不同，时来运转自然通。', src: '——《三命通会》' },
+    { text: '金能生水，水能生木，循环不已，万物化成。', src: '——《五行大义》' },
+    { text: '但行好事，莫问前程。命理指路，修行在人。', src: '——《增广贤文》' },
+    { text: '比劫重重须制化，官杀混杂要澄清。', src: '——《滴天髓》' },
+    { text: '日坐长生气势足，时逢禄马福禄全。', src: '——《渊海子平》' },
+    { text: '天德月德临命宫，一生少灾多贵人。', src: '——《三命通会》' },
+    { text: '华盖逢空好修道，桃花带煞多风流。', src: '——命理口诀' },
+    { text: '食神有气胜财官，一度逢之也好看。', src: '——《渊海子平》' },
+    { text: '人生如棋，落子无悔。知命不认命，方为大丈夫。', src: '——古语' },
+    { text: '羊刃驾杀，威权百里；伤官配印，才华盖世。', src: '——《三命通会》' },
+    { text: '五行无偏枯，一生少坎坷；喜忌分明者，处事有章法。', src: '——命理心得' },
+    { text: '从来富贵皆由命，何必区区仆仆求。', src: '——古诗' },
+  ];
+  const dayOfYear = Math.floor((now - new Date(y,0,0)) / 86400000);
+  const tipIdx = dayOfYear % tips.length;
+  const tipEl = el('daily-tip'), srcEl = el('daily-tip-src');
+  if (tipEl) tipEl.textContent = tips[tipIdx].text;
+  if (srcEl) srcEl.textContent = tips[tipIdx].src;
 }
+
+// 每分钟刷新时柱（时辰每两小时变一次，1分钟刷新够了）
+setInterval(() => {
+  const page = document.getElementById('page-index');
+  if (page && page.style.display !== 'none') initToday();
+}, 60000);
 
 
 function renderSavedListIndex() {
