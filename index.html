@@ -767,12 +767,14 @@ body {
         <div class="card-title">命局分析</div>
         <div class="analysis-label">性格特质</div>
         <div class="analysis-text" id="res-char"></div>
+        <div class="analysis-label">命局综评</div>
+        <div class="analysis-text" id="res-overview"></div>
         <div class="analysis-label">事业财运</div>
         <div class="analysis-text" id="res-career"></div>
-        <div class="analysis-label">幸运参考</div>
-        <div class="analysis-text" id="res-lucky"></div>
         <div class="analysis-label">感情姻缘</div>
         <div class="analysis-text" id="res-love"></div>
+        <div class="analysis-label">幸运参考</div>
+        <div class="analysis-text" id="res-lucky"></div>
         <div class="analysis-label">健康注意</div>
         <div class="analysis-text" id="res-health"></div>
       </div>
@@ -2306,6 +2308,67 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
     };
   }
 
+  // ===== 0b. 专旺格检测（日主极旺，一行独大）=====
+  // 《三命通会》：曲直/炎上/稼穑/从革/润下
+  // 条件：1.身旺>=75%  2.日主五行+印星合计占比>=70%  3.无强力克制（官杀极弱）
+  const zhuanWangResult = (() => {
+    if (ratio < 75) return null; // 不够旺
+
+    const wxS_zw = {木:0,火:0,土:0,金:0,水:0};
+    allTg.forEach(tg => { wxS_zw[TG_WX[tg]] += 2; });
+    allDz.forEach(dz => {
+      const cg = DZ_CG_SCORE[dz]||[], dt = cg.reduce((a,c)=>a+c.s,0)||1;
+      cg.forEach(({tg,s}) => { wxS_zw[TG_WX[tg]] += (s/dt)*2; });
+    });
+    const wxT_zw = Object.values(wxS_zw).reduce((a,b)=>a+b,0);
+
+    const dmPct = (wxS_zw[dmWx]||0) / wxT_zw;
+    const genWxZw = WX_GEN[dmWx];
+    const allyPct = ((wxS_zw[dmWx]||0) + (wxS_zw[genWxZw]||0)) / wxT_zw;
+    const keWxZw = WX_KE_WO[dmWx]; // 克我的五行（官杀）
+    const kePct = (wxS_zw[keWxZw]||0) / wxT_zw;
+
+    if (allyPct < 0.65) return null; // 同党不够强
+    if (kePct > 0.08) return null; // 有官杀克制，不成专旺
+
+    // 地支不能有官杀强根
+    const hasKeRoot = allDz.some(dz => (CHANGSHENG_SCORE[keWxZw][dz]||0) >= 4);
+    if (hasKeRoot) return null;
+
+    const nameMap = {木:'曲直格',火:'炎上格',土:'稼穑格',金:'从革格',水:'润下格'};
+    const descMap = {
+      木:'曲直格（木气专旺）。日主木气独秀，仁善正直，生机勃勃。喜水木相助，忌金克伐。适合文教、医药、农林等行业。',
+      火:'炎上格（火气专旺）。日主火气独盛，热情奔放，光明磊落。喜木火相助，忌水克灭。适合文化、电子、能源等行业。',
+      土:'稼穑格（土气专旺）。日主土气独厚，稳重宽厚，包容万物。喜火土相助，忌木克制。适合地产、农业、建筑等行业。',
+      金:'从革格（金气专旺）。日主金气独坚，果决刚毅，锐不可当。喜土金相助，忌火克炼。适合金融、法律、军警等行业。',
+      水:'润下格（水气专旺）。日主水气独润，聪慧灵动，变通无穷。喜金水相助，忌土克塞。适合贸易、物流、科技等行业。',
+    };
+    const shiWxZw = WX_SHENG[dmWx]; // 食伤（我生）
+
+    return {
+      name: nameMap[dmWx],
+      desc: descMap[dmWx],
+      xi: [genWxZw, dmWx], // 喜印比
+      ji: [keWxZw, WX_KE[dmWx]], // 忌官杀、忌财（财生官杀）
+      zhong: [shiWxZw], // 食伤泄秀中性
+      reason: `${nameMap[dmWx]}：日主${dmWx}气专旺（${Math.round(allyPct*100)}%），一行得气，顺势而行。喜${genWxZw}${dmWx}相助，忌${keWxZw}克制`
+    };
+  })();
+
+  if (zhuanWangResult) {
+    return {
+      xi: zhuanWangResult.xi,
+      zhong: zhuanWangResult.zhong,
+      ji: zhuanWangResult.ji,
+      daJi: zhuanWangResult.ji,
+      xiaoJi: [],
+      yong: zhuanWangResult.xi[0] || '',
+      yongshenReason: zhuanWangResult.reason,
+      congge: zhuanWangResult.name,
+      zhuanWangDesc: zhuanWangResult.desc
+    };
+  }
+
   // 五行计数（考虑天干合绊：被合的天干力量×0.75）
   // 重新检测天干合（calcXiJi独立计算，不依赖calcQiangRuo）
   const HE5_MAP_XI = {甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
@@ -3564,6 +3627,11 @@ function doPaipan() {
     '从儿格': '日主极弱无根，食伤之气最旺，顺势从儿。命主才华出众，表达能力极强，擅长创意、文艺、教育、演艺等领域。喜食伤旺地流通、财星接引生财，行运遇食伤财星则顺风顺水。最忌印绶生身逆势（破格）、比劫助身（扰局）、官杀克制（反噬）。从儿格成者一生靠才华立世，顺势则成就非凡，逆势则处处受阻。',
     '从财格': '日主极弱无根，财星之气最旺，顺势从财。命主对财富有天然敏感度，善于发现商机，适合经商、投资、金融、贸易等行业。喜财星旺地、食伤生财流通，行运遇财星则财源广进。最忌比劫劫财（破格争利）、印绶护身（逆势扰局）。从财格成者善于借势聚财，格局越纯越富，但需避免贪多冒进。',
     '从杀格': '日主极弱无根，官杀之气最旺，顺势从杀。命主天生不惧压力，在强势环境中反而如鱼得水，适合体制内发展、军警政法、大型企业管理等。喜财生官杀、官杀旺地，行运遇官杀财星则步步高升。最忌印绶化杀（破格）、比劫抗杀（逆势招祸）、食伤制杀（扰局）。从杀格成者格局大气，善于借助权威平台成就事业。',
+    '曲直格': '木气专旺，一行得气。命主仁善正直，富有生机与创造力，如参天大树般蓬勃向上。喜水滋润、木相助，忌金克伐破格。适合文化教育、医药养生、农林环保等行业。格局成者心怀仁德，事业稳步上升，逢水木之运则枝繁叶茂。',
+    '炎上格': '火气专旺，一行得气。命主热情开朗，光明磊落，具有强大的感召力和行动力。喜木生火、火相助，忌水克灭破格。适合文化传媒、电子科技、能源餐饮等行业。格局成者光彩照人，逢木火之运则声名远扬。',
+    '稼穑格': '土气专旺，一行得气。命主稳重宽厚，诚信包容，有大地般承载万物的胸怀。喜火生土、土相助，忌木克制破格。适合房地产、建筑工程、农业矿产等行业。格局成者根基深厚，逢火土之运则财源广进。',
+    '从革格': '金气专旺，一行得气。命主果决刚毅，原则性强，有不屈不挠的意志力。喜土生金、金相助，忌火克炼破格。适合金融法律、军警政法、机械制造等行业。格局成者雷厉风行，逢土金之运则权威日盛。',
+    '润下格': '水气专旺，一行得气。命主聪慧灵动，善于变通，如水般能屈能伸无孔不入。喜金生水、水相助，忌土克塞破格。适合贸易物流、科技信息、咨询策划等行业。格局成者智慧过人，逢金水之运则财智双收。',
   };
   const gejv = congge || gejvInfo.gejv;
   const gejvDesc = congge ? (conggeDescMap[congge] || '') : gejvInfo.gejvDesc;
@@ -3590,6 +3658,11 @@ function doPaipan() {
     '从儿格': '顺势而为，随遇而安，才艺天赋突出，擅长表达创作，性情温和而有韵味',
     '从财格': '极具经济头脑，善于把握财富机遇，行事果断灵活，对物质有天然敏感度',
     '从杀格': '格局大气，不畏权威，在逆境中反而能激发潜能，有化压力为动力的特质',
+    '曲直格': '仁善正直，富有生机，如木之向阳，积极进取，有文化气质和创造力',
+    '炎上格': '热情奔放，光明磊落，感召力强，有领袖气质，行动果断不拖泥带水',
+    '稼穑格': '稳重宽厚，包容大度，有大地般承载万物的胸怀，做事踏实可靠',
+    '从革格': '刚毅果决，原则分明，意志坚定不可动摇，做事干脆利落',
+    '润下格': '聪慧灵动，善于变通，思维敏捷如水般无孔不入，适应力极强',
   };
   // 维度2：日主底色
   const dmChar = {
@@ -3640,13 +3713,17 @@ function doPaipan() {
       '从儿格': '从格顺势而为，能量全在食伤，人生关键是不逆势，顺流则事半功倍。',
       '从财格': '从格财旺身弱，顺财势而动，最忌比劫夺财，合作借力胜过单打独斗。',
       '从杀格': '从格杀旺极强，顺势借力权威，在体制或强势环境中反而如鱼得水。',
+      '曲直格': '木气专旺，一行独秀，顺木之性则仁德深远，事业长青。',
+      '炎上格': '火气专旺，一行独盛，顺火之性则声名远播，光彩夺目。',
+      '稼穑格': '土气专旺，一行独厚，顺土之性则根基深固，财源广进。',
+      '从革格': '金气专旺，一行独坚，顺金之性则权威日盛，事业辉煌。',
+      '润下格': '水气专旺，一行独润，顺水之性则智慧通达，左右逢源。',
     },
   };
-  // 从格旺衰修饰补全（旺/弱档也加入从格条目，避免空字符串）
+  // 从格/专旺格旺衰修饰补全（旺/弱档也加入条目，避免空字符串）
+  const specialGejv = ['从儿格','从财格','从杀格','曲直格','炎上格','稼穑格','从革格','润下格'];
   ['旺','弱'].forEach(k => {
-    qrCharMod[k]['从儿格'] = qrCharMod['中']['从儿格'];
-    qrCharMod[k]['从财格'] = qrCharMod['中']['从财格'];
-    qrCharMod[k]['从杀格'] = qrCharMod['中']['从杀格'];
+    specialGejv.forEach(g => { qrCharMod[k][g] = qrCharMod['中'][g]; });
   });
   const qrKey = ratio >= 50 ? '旺' : ratio < 35 ? '弱' : '中';
 
@@ -3707,16 +3784,67 @@ function doPaipan() {
     else if (v === 0) wxExtreme.push(wxExtremeDesc[w].lack);
   });
 
-  // 合成性格
-  const charParts = [
-    gejvChar[gejv] || dmChar[dmWx],
-    dmChar[dmWx],
-    qrCharMod[qrKey][gejv] || '',
-    daySsTrait,
-    ...touGanTrait.slice(0,2),
-    ...wxExtreme.slice(0,1),
-  ].filter(Boolean);
-  const character = charParts.join('；');
+  // 合成性格（自然语言风格，避免重复堆叠）
+  const charParts = [];
+  // 主基调：格局+日主融合为一句
+  const gc = gejvChar[gejv] || '';
+  const dc = dmChar[dmWx] || '';
+  if (gc && dc) {
+    charParts.push(`${gc}。${dmWx}日主为根，${dc}`);
+  } else {
+    charParts.push(gc || dc);
+  }
+  // 旺衰点评
+  const qrMod = qrCharMod[qrKey][gejv] || '';
+  if (qrMod) charParts.push(qrMod);
+  // 日支内在
+  if (daySsTrait) charParts.push(daySsTrait);
+  // 透干特征（最多取2条）
+  touGanTrait.slice(0,2).forEach(t => charParts.push(t));
+  // 五行极端
+  wxExtreme.slice(0,1).forEach(t => charParts.push(t));
+
+  const character = charParts.filter(Boolean).join('。').replace(/。。/g,'。').replace(/；。/g,'。') + '。';
+
+  // ── 十神组合特征（核心命理组合，提升精准度）──
+  const ssCombo = [];
+  const hasSS = (ss) => allTgSS.includes(ss);
+  const hasDzSS = (ss) => [raw.year.dz,raw.month.dz,raw.day.dz,raw.hour.dz]
+    .flatMap(dz => (DZ_CANGGAN[dz]||[]).map(tg => getShishen(raw.day.tg, tg)))
+    .includes(ss);
+
+  // 伤官配印
+  if ((hasSS('伤官') || hasDzSS('伤官')) && (hasSS('正印') || hasSS('偏印'))) {
+    ssCombo.push({name:'伤官配印', desc:'才华横溢且有涵养控制，表达犀利而不失分寸，适合专业技术或学术领域'});
+  }
+  // 杀印相生
+  if ((hasSS('七杀') || hasDzSS('七杀')) && (hasSS('正印') || hasSS('偏印'))) {
+    ssCombo.push({name:'杀印相生', desc:'权力与智慧兼备，有魄力有谋略，适合军政法或高层管理'});
+  }
+  // 食神制杀
+  if ((hasSS('食神') || hasDzSS('食神')) && (hasSS('七杀') || hasDzSS('七杀'))) {
+    ssCombo.push({name:'食神制杀', desc:'以柔克刚，化解压力于无形，处事圆融而有策略'});
+  }
+  // 财官双美
+  if ((hasSS('正财') || hasSS('偏财')) && (hasSS('正官'))) {
+    ssCombo.push({name:'财官双美', desc:'财与名并行，事业稳步上升易获社会认可，富贵双全之象'});
+  }
+  // 官印相生
+  if (hasSS('正官') && (hasSS('正印') || hasSS('偏印'))) {
+    ssCombo.push({name:'官印相生', desc:'权力有学识支撑，做事有章法有后盾，职场晋升运势强'});
+  }
+  // 食伤生财
+  if ((hasSS('食神') || hasSS('伤官')) && (hasSS('正财') || hasSS('偏财'))) {
+    ssCombo.push({name:'食伤生财', desc:'靠才华和创意赚钱，适合创业或自由职业，财源来自智慧'});
+  }
+  // 枭神夺食
+  if (hasSS('偏印') && hasSS('食神')) {
+    ssCombo.push({name:'枭神夺食', desc:'才华易被压制，创意灵感常被现实打断，须防好事多磨'});
+  }
+  // 伤官见官
+  if (hasSS('伤官') && hasSS('正官')) {
+    ssCombo.push({name:'伤官见官', desc:'内心叛逆与规矩感并存，职场中易与上级产生冲突，宜选择自由度高的工作'});
+  }
 
   // ── 事业财运 ──
   const gejvCareerDetail = {
@@ -3742,14 +3870,31 @@ function doPaipan() {
   const xiIndustry = xi.filter(Boolean).map(w => wxCareer[w]).join('；');
   // 透干对事业加成
   const careerBonus = [];
-  if ((ssCnt['食神']||0)+(ssCnt['伤官']||0) >= 1) careerBonus.push('食伤透干赋予创作与表达天赋，适合有展示空间的工作');
-  if ((ssCnt['正印']||0)+(ssCnt['偏印']||0) >= 1) careerBonus.push('印星透干利于学术与专业积累，贵人提携运强');
-  if ((ssCnt['正官']||0)+(ssCnt['七杀']||0) >= 1) careerBonus.push('官杀透干有管理与竞争优势，适合承压能力强的岗位');
-  if ((ssCnt['正财']||0)+(ssCnt['偏财']||0) >= 1) careerBonus.push('财星透干对商业机会敏感，理财与经营有天然优势');
-  const careerBonusStr = careerBonus.length ? careerBonus.join('，') + '。' : '';
+  if ((ssCnt['食神']||0)+(ssCnt['伤官']||0) >= 1) careerBonus.push('食伤透干赋予创意天赋，适合有表达和展示空间的工作');
+  if ((ssCnt['正印']||0)+(ssCnt['偏印']||0) >= 1) careerBonus.push('印星透干利于专业深耕，贵人提携运较强');
+  if ((ssCnt['正官']||0)+(ssCnt['七杀']||0) >= 1) careerBonus.push('官杀透干有管理潜质，适合承压能力要求高的岗位');
+  if ((ssCnt['正财']||0)+(ssCnt['偏财']||0) >= 1) careerBonus.push('财星透干对商机敏感，适合经营或理财相关工作');
+  const careerBonusStr = careerBonus.length ? careerBonus.slice(0,1).join('') + '。' : '';
   const cd = gejvCareerDetail[gejv];
-  const career = `${cd ? cd.core : wxCareer[dmWx]}。${cd ? cd.tip + '。' : ''}${careerBonusStr}喜用神为${xiStr}，宜从事${xiIndustry}等相关行业。`;
-  const lucky = `幸运色：${xiColors}；旺运方位：${xiDirs}。`;
+  // 财运分析
+  const zhengCaiCnt = allTgSS.filter(s => s === '正财').length;
+  const pianCaiCnt = allTgSS.filter(s => s === '偏财').length;
+  let fortuneTip = '';
+  if (zhengCaiCnt >= 2) fortuneTip = '正财双透，收入稳定持续，适合工薪或稳健投资，财运踏实。';
+  else if (pianCaiCnt >= 2) fortuneTip = '偏财双透，善于发现商机，适合投资经商，财运起伏但上限高。';
+  else if (zhengCaiCnt >= 1 && pianCaiCnt >= 1) fortuneTip = '正偏财并见，既有稳定收入来源，又善于把握额外机遇。';
+  else if (zhengCaiCnt >= 1) fortuneTip = '正财入命，财来正道，适合稳扎稳打积累。';
+  else if (pianCaiCnt >= 1) fortuneTip = '偏财入命，对金钱有天然嗅觉，理财灵活。';
+  else fortuneTip = ratio >= 50 ? '身旺可担财，逢财运年份利于求财。' : '身弱财星隐，宜先强化自身再求财。';
+
+  const career = `${cd ? cd.core : wxCareer[dmWx]}。${cd ? cd.tip + '。' : ''}${careerBonusStr}${fortuneTip}喜用方向为${xiStr}属性，可关注${xiIndustry}等领域。`;
+
+  // 幸运参考（丰富化）
+  const wxNum = {木:'3、8',火:'2、7',土:'5、0',金:'4、9',水:'1、6'};
+  const xiNums = xi.filter(Boolean).slice(0,2).map(w => wxNum[w]).join('、');
+  const wxSeason = {木:'春季（2-4月）',火:'夏季（5-7月）',土:'四季交替月（3/6/9/12月）',金:'秋季（8-10月）',水:'冬季（11-1月）'};
+  const xiSeasons = xi.filter(Boolean).slice(0,2).map(w => wxSeason[w]).join('、');
+  const lucky = `幸运色：${xiColors}。旺运方位：${xiDirs}。幸运数字：${xiNums}。旺运时节：${xiSeasons}。`;
 
   // ── 感情姻缘（多维度）──
   const daySS = raw.day.dzSS || '';
@@ -3814,34 +3959,80 @@ function doPaipan() {
 
   // 3. 格局对感情的影响
   const gejvLoveMap = {
-    '伤官格': '伤官格感情最为复杂，情感丰富易动心，但对伴侣要求极高，宜成熟后再论婚嫁',
+    '正官格': '正官格重名分，感情中看重门当户对与社会认可，婚姻追求稳定体面',
+    '七杀格': '七杀格感情带有激情与压迫感，爱得深也容易有摩擦，婚姻宜找互补型伴侣',
     '正印格': '正印格重精神契合，物质条件非首要，感情中贵人多，婚姻追求心灵共鸣',
     '偏印格': '偏印格感情较为被动，内心细腻但不善表达，需要对方主动给予安全感',
-    '七杀格': '七杀格感情带有激情与压迫感，爱得深也容易有摩擦，婚姻宜找互补型伴侣',
-    '食神格': '食神格感情温和，享受陪伴，婚姻生活注重品质，配偶多贤良',
+    '正财格': '正财格感情务实，注重物质基础与生活品质，配偶多勤俭持家型',
+    '偏财格': '偏财格异性缘旺，感情机会多但选择多则犹豫多，宜果断择一',
+    '食神格': '食神格感情温和，享受陪伴，婚姻生活注重品质与情趣，配偶多贤良',
+    '伤官格': '伤官格感情最为复杂，情感丰富易动心，但对伴侣要求极高，宜成熟后再论婚嫁',
+    '建禄格': '建禄格独立性强，感情中不愿迁就，宜找同样独立但能互相欣赏的伴侣',
+    '月刃格': '月刃格性格刚烈，感情中容易强势，婚姻需学会柔软和退让',
   };
   if (gejvLoveMap[gejv]) loveParts.push(gejvLoveMap[gejv]);
 
   // 4. 旺衰影响感情态度
   if (ratio >= 50) {
     loveParts.push(gender === '男'
-      ? `身旺个性强，婚姻中容易主导，宜找性格温和的伴侣互补，喜用${xiStr}旺的流年感情运佳`
-      : `身旺独立自主，感情中主见强，宜找包容度高的伴侣，喜用${xiStr}旺的流年感情运佳`);
+      ? `身旺个性强，婚姻中容易主导，宜找性格温和的伴侣互补`
+      : `身旺独立自主，感情中主见强，宜找包容度高的伴侣`);
   } else if (ratio < 35) {
     loveParts.push(gender === '男'
-      ? `身弱宜找能助力自己的伴侣，感情依赖感较强，喜用${xiStr}旺的流年易逢良缘`
-      : `身弱感情细腻敏感，渴望安全感，喜用${xiStr}旺的流年感情有进展`);
+      ? `身弱宜找能助力自己的伴侣，感情依赖感较强`
+      : `身弱感情细腻敏感，渴望安全感`);
   } else {
-    loveParts.push(`身中感情态度平和理性，能给予伴侣稳定感，喜用${xiStr}旺的流年感情顺遂`);
+    loveParts.push(`身中感情态度平和理性，能给予伴侣稳定感`);
   }
 
-  // 精简感情文字：最多保留3段，格局描述和旺衰合并
-  // loveParts结构：[日支, 夫妻星状态, 格局(可选), 旺衰]
-  // 如果超过3段，去掉格局段（格局信息在上方格局描述里已有）
-  const loveFinal = loveParts.length > 3
-    ? [loveParts[0], loveParts[1], loveParts[loveParts.length-1]]
-    : loveParts;
-  const love = loveFinal.join('；') + '。';
+  // 5. 婚姻相关神煞影响
+  const szList = calcShenzha(raw);
+  const szNames = szList.map(s => s.name);
+  const loveSzParts = [];
+  if (szNames.includes('桃花')) loveSzParts.push('命带桃花，异性缘旺，魅力突出');
+  if (szNames.includes('红鸾')) loveSzParts.push('红鸾入命，姻缘来得自然');
+  if (szNames.includes('天喜')) loveSzParts.push('天喜星临，利于婚恋喜事');
+  if (szNames.includes('孤鸾煞')) loveSzParts.push('孤鸾入命，感情多波折，宜晚婚');
+  if (szNames.includes('红艳煞')) loveSzParts.push('红艳入命，感情丰富须防不专');
+  if (szNames.includes('天乙贵人') && szList.some(s => s.name === '天乙贵人' && s.col === 2)) loveSzParts.push('日柱天乙贵人，配偶条件较好');
+  if (loveSzParts.length) loveParts.push(loveSzParts.join('；'));
+
+  // 6. 配偶画像（日支藏干主气 → 配偶性格特征）
+  const dayDzCG = DZ_CANGGAN[raw.day.dz] || [];
+  if (dayDzCG.length > 0) {
+    const spouseWx = TG_WX[dayDzCG[0]];
+    const spouseChar = {
+      '木': '配偶性格仁厚正直，有上进心和包容力，为人温和但有主见',
+      '火': '配偶热情开朗，行动力强，性格直爽但脾气可能急躁',
+      '土': '配偶稳重踏实，诚信可靠，做事有耐心，给人安全感',
+      '金': '配偶果断干练，原则性强，性格刚毅，做事利落',
+      '水': '配偶聪明灵活，善于沟通，懂变通，思维活跃'
+    };
+    if (spouseChar[spouseWx]) loveParts.push(spouseChar[spouseWx]);
+  }
+
+  // 7. 婚姻时机提示
+  const loveWx = gender === '男' ? WX_KE[dmWx] : WX_KE_WO[dmWx]; // 男看财(我克)，女看官(克我)
+  const loveWxDir = wxDir[loveWx] || '';
+  loveParts.push(`婚恋旺运方位偏${loveWxDir}，流年遇${loveWx}旺之年利于姻缘进展`);
+
+  // 8. 日支与月支/时支关系对婚姻的影响
+  const dayDz = raw.day.dz;
+  const monthDzL = raw.month.dz;
+  const hourDz = raw.hour.dz;
+  const liuheL = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']];
+  const chongL = [['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']];
+  const isDmHe = liuheL.some(p => (p[0]===dayDz&&p[1]===monthDzL)||(p[1]===dayDz&&p[0]===monthDzL));
+  const isDhHe = liuheL.some(p => (p[0]===dayDz&&p[1]===hourDz)||(p[1]===dayDz&&p[0]===hourDz));
+  const isDmChong = chongL.some(p => (p[0]===dayDz&&p[1]===monthDzL)||(p[1]===dayDz&&p[0]===monthDzL));
+  const isDhChong = chongL.some(p => (p[0]===dayDz&&p[1]===hourDz)||(p[1]===dayDz&&p[0]===hourDz));
+  if (isDmHe) loveParts.push('日支与月支六合，婚姻得家庭支持，感情根基稳固');
+  if (isDhHe) loveParts.push('日支与时支六合，婚后家庭和睦，晚年夫妻感情好');
+  if (isDmChong) loveParts.push('日支与月支相冲，婚姻可能受家庭或外界环境干扰');
+  if (isDhChong) loveParts.push('日支与时支相冲，婚后生活易有波动，需用心经营');
+
+  // 感情文字合成（保留所有维度，用句号连接更自然）
+  const love = loveParts.join('。') + '。';
 
   // ── 健康注意（多维度）──
   const wxHealth = {
@@ -3921,13 +4112,46 @@ function doPaipan() {
   ].filter(Boolean);
   const health = healthParts.join('；') + '。';
 
+  // ── 命局综评（十神组合+格局纯杂+用神有力度）──
+  const ssComboStr = ssCombo.length > 0
+    ? ssCombo.slice(0,2).map(c => `【${c.name}】${c.desc}`).join('。') + '。'
+    : '';
+
+  // 日主十干特性（无组合时补充深度）
+  const tianGanDetail = {
+    '甲': '甲木参天，为栋梁之才，性格正直有担当，适合领头开创。',
+    '乙': '乙木花草，柔韧缠绕，善于借力，性格温婉而有韧性。',
+    '丙': '丙火太阳，光明普照，慷慨大方，热情坦荡但有时过于直率。',
+    '丁': '丁火烛光，温暖细腻，内敛含蓄，善于洞察人心。',
+    '戊': '戊土大山，厚重稳固，值得信赖，但有时过于固执保守。',
+    '己': '己土田园，滋养万物，包容务实，善于经营但需防优柔。',
+    '庚': '庚金刀剑，锋利果断，正义感强，但有时过于刚硬直接。',
+    '辛': '辛金珠玉，细腻精致，品味不俗，外柔内刚，善于打磨自我。',
+    '壬': '壬水大海，胸怀宽广，智慧深沉，善于谋略但需防放纵。',
+    '癸': '癸水雨露，滋润无声，心思细密，直觉极强，善于感悟。',
+  };
+  const tianGanStr = (!ssCombo.length && tianGanDetail[raw.day.tg]) ? tianGanDetail[raw.day.tg] : '';
+
+  // 格局纯杂度评估
+  const guanShaCount = allTgSS.filter(s => s === '正官' || s === '七杀').length;
+  const caiCount = allTgSS.filter(s => s === '正财' || s === '偏财').length;
+  const yinCount = allTgSS.filter(s => s === '正印' || s === '偏印').length;
+  let purityDesc = '';
+  if (guanShaCount >= 2 && hasSS('正官') && hasSS('七杀')) purityDesc = '官杀混杂，命局稍显浊乱，须有制化方成器。';
+  else if (caiCount >= 2 && hasSS('正财') && hasSS('偏财')) purityDesc = '正偏财混杂，财路多元但精力分散，须专注方向。';
+  else if (ssCombo.some(c => c.name === '枭神夺食') || ssCombo.some(c => c.name === '伤官见官')) purityDesc = '命局有克战组合，人生多波折考验，化解后反成动力。';
+  else if (ssCombo.some(c => ['财官双美','官印相生','杀印相生','食伤生财'].includes(c.name))) purityDesc = '命局组合精良，格局纯正有力，先天条件优越。';
+  else purityDesc = '命局五行流转，格局中正，稳步发展。';
+
+  const overview = tianGanStr + ssComboStr + purityDesc;
+
   raw.analysis = {
     gejv, gejvDesc,
     xi: xi.filter(Boolean), zhong: zhong.filter(Boolean), ji: ji.filter(Boolean),
     daJi: (daJi||[]).filter(Boolean), xiaoJi: (xiaoJi||[]).filter(Boolean),
     dmWx, xiStr, jiStr,
     yongshenReason,
-    character,
+    character, overview,
     career, lucky, love, health
   };
   raw.qiangRuo = congge ? congge : qiangRuo;
@@ -4095,6 +4319,7 @@ function renderPaipanResult(raw) {
 
   // 命局分析
   const el_res_char = document.getElementById('res-char'); if (el_res_char) el_res_char.textContent = an.character;
+  const el_res_overview = document.getElementById('res-overview'); if (el_res_overview) el_res_overview.textContent = an.overview || '';
   const el_res_career = document.getElementById('res-career'); if (el_res_career) el_res_career.textContent = an.career;
   const el_res_lucky = document.getElementById('res-lucky'); if (el_res_lucky) el_res_lucky.textContent = an.lucky;
   const el_res_love = document.getElementById('res-love'); if (el_res_love) el_res_love.textContent = an.love;
