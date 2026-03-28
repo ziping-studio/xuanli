@@ -688,10 +688,6 @@ body {
       <div style="font-size:14px;color:var(--gold2);line-height:1.9;padding:0 10px" id="daily-tip"></div>
       <div style="font-size:10px;color:var(--text3);margin-top:8px" id="daily-tip-src"></div>
     </div>
-    <div class="card" id="saved-panel-index" style="display:none">
-      <div class="card-title">已保存命盘 <span id="saved-count-index" style="color:var(--text3);font-size:11px;font-weight:normal"></span></div>
-      <div id="saved-list-index"></div>
-    </div>
     <div class="card" style="text-align:center">
       <p style="font-size:13px;color:var(--text2);line-height:1.9;margin-bottom:12px">输入生辰八字<br>推演命局格局·喜忌·大运</p>
       <button class="btn-submit" onclick="switchTab('paipan')">开始排盘 →</button>
@@ -702,9 +698,10 @@ body {
 
 <!-- ===== 排盘页 ===== -->
 <div class="page" id="page-paipan">
-  <div class="page-header">
+  <div class="page-header" style="position:relative">
     <div class="header-title">排 盘</div>
     <div class="header-subtitle">输入生辰，推演命局</div>
+    <button onclick="showSavedPanel()" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);padding:5px 12px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.3);border-radius:8px;color:var(--gold);font-size:12px;cursor:pointer" id="btn-my-bazi">我的命盘</button>
   </div>
   <div class="main-scroll">
     <div class="card">
@@ -781,10 +778,6 @@ body {
       </div>
       <button class="btn-save" onclick="saveBazi()">✦ 保存此命盘</button>
       <button class="btn-save" onclick="shareBazi()" style="background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.08));color:var(--gold2);border-color:var(--gold)">✦ 分享命盘卡片</button>
-      <div class="card" id="saved-panel-card" style="display:none">
-        <div class="card-title">已保存命盘 <span id="saved-count" style="color:var(--text3);font-size:11px;font-weight:normal"></span></div>
-        <div id="saved-list"></div>
-      </div>
     </div>
   </div>
 </div>
@@ -866,7 +859,11 @@ body {
   </div>
   <div class="main-scroll">
     <div class="card">
-      <div class="hp-section-label">男方信息</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="hp-section-label" style="margin-bottom:0">男方信息</div>
+        <button onclick="showHpSavedPicker('m')" style="padding:4px 10px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);border-radius:6px;color:var(--gold);font-size:11px;cursor:pointer">从命盘选择</button>
+      </div>
+      <div id="hp-m-selected" style="display:none;margin:8px 0;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:13px;color:var(--gold2)"></div>
       <div class="input-row">
         <span class="input-label">历法</span>
         <div class="btn-group" style="flex:1">
@@ -895,7 +892,11 @@ body {
       </div>
     </div>
     <div class="card">
-      <div class="hp-section-label">女方信息</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="hp-section-label" style="margin-bottom:0">女方信息</div>
+        <button onclick="showHpSavedPicker('f')" style="padding:4px 10px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);border-radius:6px;color:var(--gold);font-size:11px;cursor:pointer">从命盘选择</button>
+      </div>
+      <div id="hp-f-selected" style="display:none;margin:8px 0;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:13px;color:var(--gold2)"></div>
       <div class="input-row">
         <span class="input-label">历法</span>
         <div class="btn-group" style="flex:1">
@@ -948,6 +949,24 @@ body {
         <div style="font-size:13px;color:var(--text2);line-height:1.8" id="hp-advice"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ===== 我的命盘浮层 ===== -->
+<div id="saved-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#0d0e13;z-index:200;overflow-y:auto">
+  <div style="padding:20px 20px 10px;text-align:center">
+    <div style="font-size:11px;color:var(--text3);letter-spacing:3px;margin-bottom:6px">✦ ✧ ✦</div>
+    <div style="font-size:20px;color:var(--gold2);font-weight:600;letter-spacing:4px">我的命盘</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px" id="saved-overlay-count"></div>
+  </div>
+  <div id="saved-overlay-list" style="padding:10px 16px"></div>
+  <div id="saved-overlay-empty" style="display:none;text-align:center;padding:50px 20px">
+    <div style="font-size:36px;opacity:0.2;margin-bottom:12px">☯</div>
+    <div style="color:var(--text3);font-size:14px">还没有保存的命盘</div>
+    <div style="color:var(--text3);font-size:12px;margin-top:6px">排盘后点「保存此命盘」即可添加</div>
+  </div>
+  <div style="padding:16px 20px 40px;text-align:center">
+    <button onclick="closeSavedPanel()" style="padding:10px 40px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:10px;color:var(--gold);font-size:14px;cursor:pointer;letter-spacing:2px">返回排盘</button>
   </div>
 </div>
 
@@ -4103,30 +4122,78 @@ function saveBazi() {
 }
 
 function renderSavedList() {
+  // 渲染到浮层
+  renderSavedOverlay();
+  // 更新按钮上的数量提示
   try {
     const list = JSON.parse(localStorage.getItem('savedBaziList') || '[]');
-    const card = document.getElementById('saved-panel-card');
-    const container = document.getElementById('saved-list');
-    if (list.length === 0) { card.style.display = 'none'; return; }
-    card.style.display = 'block';
-    document.getElementById('saved-count').textContent = `共${list.length}个`;
-    container.innerHTML = list.map((item, i) => `
-      <div class="saved-item" data-idx="${i}">
-        <div style="flex:1;cursor:pointer" data-action="load" data-idx="${i}">
-          <div class="saved-name">${item.profile?.name || '未命名'}</div>
-          <div class="saved-date">${item.savedAt || ''}</div>
+    const btn = document.getElementById('btn-my-bazi');
+    if (btn) btn.textContent = list.length > 0 ? `我的命盘(${list.length})` : '我的命盘';
+  } catch(e) {}
+}
+
+function renderSavedOverlay() {
+  try {
+    const list = JSON.parse(localStorage.getItem('savedBaziList') || '[]');
+    const container = document.getElementById('saved-overlay-list');
+    const empty = document.getElementById('saved-overlay-empty');
+    const countEl = document.getElementById('saved-overlay-count');
+    if (!container) return;
+    if (countEl) countEl.textContent = list.length > 0 ? `共 ${list.length} 个命盘` : '';
+    if (list.length === 0) {
+      container.innerHTML = '';
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    container.innerHTML = list.map((item, i) => {
+      const name = item.profile?.name || '未命名';
+      const gender = item.profile?.gender || '';
+      const date = item.savedAt || '';
+      const bz = item.result;
+      const pillars = bz ? [
+        {tg:bz.year?.tg,dz:bz.year?.dz},
+        {tg:bz.month?.tg,dz:bz.month?.dz},
+        {tg:bz.day?.tg,dz:bz.day?.dz},
+        {tg:bz.hour?.tg,dz:bz.hour?.dz}
+      ] : [];
+      const pillarHtml = pillars.map(p => {
+        const tw = TG_WX[p.tg]||'土', dw = DZ_BEN[p.dz]||'土';
+        return `<span style="margin-right:6px"><span class="${WX_CSS[tw]||'earth'}">${p.tg||''}</span><span class="${WX_CSS[dw]||'earth'}">${p.dz||''}</span></span>`;
+      }).join('');
+      return `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div>
+            <span style="font-size:16px;color:var(--text1);font-weight:500">${name}</span>
+            <span style="font-size:11px;color:var(--text3);margin-left:6px">${gender}命</span>
+          </div>
+          <span style="font-size:11px;color:var(--text3)">${date}</span>
         </div>
-        <div class="saved-del" data-action="del" data-idx="${i}">删除</div>
-      </div>`).join('');
-    // 事件委托
+        <div style="font-size:16px;letter-spacing:3px;margin-bottom:12px">${pillarHtml}</div>
+        <div style="display:flex;gap:8px">
+          <button data-action="load" data-idx="${i}" style="flex:1;padding:8px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);border-radius:8px;color:var(--gold);font-size:13px;cursor:pointer">加载此命盘</button>
+          <button data-action="del" data-idx="${i}" style="padding:8px 14px;background:none;border:1px solid rgba(255,100,80,0.2);border-radius:8px;color:var(--text3);font-size:12px;cursor:pointer">删除</button>
+        </div>
+      </div>`;
+    }).join('');
     container.onclick = function(e) {
       const el = e.target.closest('[data-action]');
       if (!el) return;
       const idx = parseInt(el.dataset.idx);
-      if (el.dataset.action === 'load') loadSaved(idx);
-      if (el.dataset.action === 'del') deleteSaved(idx);
+      if (el.dataset.action === 'load') { loadSaved(idx); closeSavedPanel(); }
+      if (el.dataset.action === 'del') { deleteSaved(idx); }
     };
   } catch(e) {}
+}
+
+function showSavedPanel() {
+  renderSavedOverlay();
+  document.getElementById('saved-overlay').style.display = 'block';
+}
+
+function closeSavedPanel() {
+  document.getElementById('saved-overlay').style.display = 'none';
 }
 
 function loadSaved(idx) {
@@ -4148,6 +4215,7 @@ function deleteSaved(idx) {
     list.splice(idx, 1);
     localStorage.setItem('savedBaziList', JSON.stringify(list));
     renderSavedList();
+    renderSavedOverlay();
     showToast('已删除');
   } catch(e) {}
 }
@@ -4460,6 +4528,84 @@ function getHpSolar(side) {
   return { year, month: monthIdx + 1, day: dayIdx + 1, hour: HOURS[hourIdx].val };
 }
 
+// 婚配页已保存命盘选择
+const hpSavedData = { m: null, f: null };
+
+function showHpSavedPicker(side) {
+  try {
+    const list = JSON.parse(localStorage.getItem('savedBaziList') || '[]');
+    if (list.length === 0) { showToast('还没有保存的命盘，请先排盘保存'); return; }
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
+
+    let listHtml = list.map((item, i) => {
+      const name = item.profile?.name || '未命名';
+      const gender = item.profile?.gender || '';
+      const bz = item.result;
+      const pillars = bz ? `${bz.year?.tg||''}${bz.year?.dz||''} ${bz.month?.tg||''}${bz.month?.dz||''} ${bz.day?.tg||''}${bz.day?.dz||''} ${bz.hour?.tg||''}${bz.hour?.dz||''}` : '';
+      return `<div data-idx="${i}" style="padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer">
+        <div style="font-size:15px;color:var(--text1)">${name} <span style="font-size:11px;color:var(--text3)">${gender}命</span></div>
+        <div style="font-size:13px;color:var(--gold);letter-spacing:2px;margin-top:4px">${pillars}</div>
+      </div>`;
+    }).join('');
+
+    overlay.innerHTML = `
+      <div style="background:#1a1b26;border:1px solid rgba(201,168,76,0.3);border-radius:14px;width:90%;max-width:360px;max-height:70vh;overflow-y:auto">
+        <div style="padding:16px;text-align:center;border-bottom:1px solid var(--border)">
+          <div style="font-size:15px;color:var(--gold2);font-weight:600">选择${side === 'm' ? '男方' : '女方'}命盘</div>
+        </div>
+        <div id="hp-picker-list">${listHtml}</div>
+        <div style="padding:12px;text-align:center">
+          <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 30px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-size:13px;cursor:pointer">取消</button>
+        </div>
+      </div>
+    `;
+
+    overlay.querySelector('#hp-picker-list').onclick = function(e) {
+      const el = e.target.closest('[data-idx]');
+      if (!el) return;
+      const idx = parseInt(el.dataset.idx);
+      const item = list[idx];
+      if (!item) return;
+
+      const prefix = `hp-${side}-`;
+      // 优先用 input 里的公历日期，fallback 用 result 里的信息
+      const inp = item.input || {};
+      const yr = inp.year || inp.solarYear;
+      const mo = inp.month || inp.solarMonth;
+      const dy = inp.day || inp.solarDay;
+      const hr = inp.hour; // 时辰小时值 (0,2,4...22)
+
+      if (yr) document.getElementById(prefix + 'year').value = yr;
+      if (mo) document.getElementById(prefix + 'month').value = mo - 1; // select value 是 0-based
+      if (dy) document.getElementById(prefix + 'day').value = dy - 1; // select value 是 0-based
+      if (hr !== undefined) {
+        // hour 是小时值(0,2,4...22)，select index = hour/2
+        const hourSelectIdx = Math.floor(hr / 2);
+        document.getElementById(prefix + 'hour').value = hourSelectIdx;
+      }
+
+      // 显示已选择提示
+      const selEl = document.getElementById(`hp-${side}-selected`);
+      const name = item.profile?.name || '未命名';
+      const bz = item.result;
+      const pillars = bz ? `${bz.year?.tg||''}${bz.year?.dz||''} ${bz.month?.tg||''}${bz.month?.dz||''} ${bz.day?.tg||''}${bz.day?.dz||''} ${bz.hour?.tg||''}${bz.hour?.dz||''}` : '';
+      if (selEl) {
+        selEl.style.display = 'block';
+        selEl.innerHTML = `✦ 已选择：${name}（${pillars}）`;
+      }
+
+      hpSavedData[side] = item;
+      overlay.remove();
+      showToast(`已选择${side === 'm' ? '男方' : '女方'}：${name}`);
+    };
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  } catch(e) {}
+}
+
 function doHepan() {
   const ms = getHpSolar('m');
   const fs = getHpSolar('f');
@@ -4611,7 +4757,9 @@ function switchTab(name) {
   if (page) page.style.display = 'block';
   if (name === 'wuxing') renderWuxing();
   if (name === 'dayun')  renderDayun();
-  if (name === 'index')  { renderSavedListIndex(); initToday(); }
+  if (name === 'index')  { initToday(); }
+  // 关闭浮层
+  closeSavedPanel();
 }
 
 
@@ -4706,34 +4854,6 @@ setInterval(() => {
 }, 60000);
 
 
-function renderSavedListIndex() {
-  try {
-    const list = JSON.parse(localStorage.getItem('savedBaziList') || '[]');
-    const card = document.getElementById('saved-panel-index');
-    if (!card) return;
-    if (list.length === 0) { card.style.display = 'none'; return; }
-    card.style.display = 'block';
-    const cntEl = document.getElementById('saved-count-index');
-    if (cntEl) cntEl.textContent = '共'+list.length+'个';
-    const container = document.getElementById('saved-list-index');
-    if (!container) return;
-    container.innerHTML = list.map((item,i) => `
-      <div class="saved-item">
-        <div style="flex:1;cursor:pointer" data-action="load" data-idx="${i}">
-          <div class="saved-name">${item.profile?.name||'未命名'}</div>
-          <div class="saved-date">${item.savedAt||''}</div>
-        </div>
-      </div>`).join('');
-    container.onclick = e => {
-      const el = e.target.closest('[data-action]');
-      if (!el) return;
-      loadSaved(parseInt(el.dataset.idx));
-      switchTab('paipan');
-    };
-  } catch(e) {}
-}
-
-
 window.addEventListener('DOMContentLoaded', () => {
   // 排盘页选择器
   buildMonthSelect('pp-month', 'solar');
@@ -4749,7 +4869,6 @@ window.addEventListener('DOMContentLoaded', () => {
   // 初始化首页
   initToday();
   renderSavedList();
-  renderSavedListIndex();
   // 恢复上次输入
   try {
     const last = JSON.parse(localStorage.getItem('xuanli_last_input') || 'null');
