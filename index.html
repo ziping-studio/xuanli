@@ -2,6 +2,9 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZXPLE979VE"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-ZXPLE979VE');</script>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="theme-color" content="#0d0e13">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1097,16 +1100,21 @@ function getMonthDzByJieqi(year, month, day, hour) {
   // 从后往前找第一个 <= 出生时间的节气
   let resultDzIdx = 0;
 
-  // 先判断是否在本年小寒之前（即仍在上年子月/亥月）
+  // 先判断是否在本年小寒之前（即仍在上年子月或亥月）
   if (birthStr < thisYear[0]) {
-    // 在小寒之前，看上年大雪之后还是之前
-    if (prevYear && birthStr >= prevYear[11]) {
+    // 出生在本年小寒之前（1月初）
+    // 此时一定在上年大雪(12月)之后 → 子月
+    // 因为能走到这里说明 month=1，而大雪在12月，1月必然在大雪之后
+    if (month <= 1) {
+      // 上年大雪已过（12月初），当前1月初 → 子月
       resultDzIdx = 0; // 子月
-    } else if (prevYear && birthStr >= prevYear[10]) {
-      resultDzIdx = 11; // 亥月
-    } else {
-      // 更早，继续用简化法
-      resultDzIdx = (month + 1) % 12;
+    } else if (prevYear) {
+      // 理论上不会走到这里（month>1时birthStr不可能<小寒01-0x），保险处理
+      if (birthStr >= prevYear[10]) {
+        resultDzIdx = 11; // 亥月
+      } else {
+        resultDzIdx = (month + 1) % 12;
+      }
     }
     return resultDzIdx;
   }
