@@ -805,7 +805,8 @@ body {
           <span style="font-size:11px;color:var(--text3)">喜：</span><span id="wx-xi-tags"></span>
           <span id="wx-zhong-tags" style="display:none"></span>
           <span style="font-size:11px;color:var(--text3);margin-left:6px">忌：</span><span id="wx-ji-tags"></span>
-          <span style="font-size:11px;color:var(--text3);margin-left:6px">闲：</span><span id="wx-shen-tags"></span>
+          <span id="wx-shen-wrap" style="display:none"><span style="font-size:11px;color:var(--text3);margin-left:6px">慎：</span><span id="wx-shen-tags"></span></span>
+          <span id="wx-xian-wrap" style="display:none"><span style="font-size:11px;color:var(--text3);margin-left:6px">闲：</span><span id="wx-xian-tags"></span></span>
         </div>
       </div>
       <div class="card">
@@ -2520,6 +2521,7 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
     // add_zhong：添加中性（不冲突才加）
     if (adj.add_zhong) adj.add_zhong.forEach(w => { if (w && !xiBase.includes(w) && !jiBase.includes(w) && !zhongBase.includes(w)) zhongBase.push(w); });
     gejvDesc = adj.note || gejvInfo.gejvDesc || '';
+    if (adj.note) reasons.push(`【格局】${adj.note}`);
   }
 
   // ===== 3. 调候用神（Level 1，最高优先）=====
@@ -2604,17 +2606,20 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
     if (['亥','子','丑'].includes(monthDz) && jiWx === '水') return;
     // 热月（巳/午/未）：火本就当令旺相，不需路径A升喜
     if (['巳','午','未'].includes(monthDz) && jiWx === '火') return;
+    // Y = 克jiWx的五行
     const Y = WX_KE_WO[jiWx];
     if (!Y) return;
-    const genY = WX_GEN[Y];
+    // Y如果是喜神（帮日主的），不应视为病
+    if (xiBase.includes(Y)) return;
     const totalSum = Object.values(wxCount).reduce((a,b)=>a+b,0)||1;
-    const yAllyPct = ((wxCount[Y]||0) + (wxCount[genY]||0)) / totalSum;
+    const yPct = (wxCount[Y]||0) / totalSum;
     const selfPct = (wxCount[jiWx]||0) / totalSum;
-    if (yAllyPct > 0.40 && selfPct < 0.18) {
+    // Y自身必须真正过旺（>30%），且jiWx自身很弱（<18%）
+    if (yPct > 0.30 && selfPct < 0.18) {
       const idx = jiBase.indexOf(jiWx);
       if (idx >= 0) jiBase.splice(idx, 1);
       if (!xiBase.includes(jiWx)) xiBase.push(jiWx);
-      reasons.push(`【病药】${Y}系偏旺为病（${Math.round(yAllyPct*100)}%），${jiWx}克之为药，去病救局`);
+      reasons.push(`【病药】${Y}偏旺（${Math.round(yPct*100)}%），${jiWx}克之为药，去病救局`);
     }
   });
 
@@ -4265,17 +4270,36 @@ function renderWuxing() {
     nameBar.style.display = 'none';
   }
 
-  // 喜忌闲神标签（闲神=中性zhong，忌神=daJi）
+  // 喜忌慎闲标签（与旺衰条保持一致）
   document.getElementById('wx-xi-tags').innerHTML = xiList.map(w =>
     `<span class="xi-tag">${w}</span>`).join('');
-  document.getElementById('wx-ji-tags').innerHTML = (an.ji||[]).map(w =>
+  document.getElementById('wx-ji-tags').innerHTML = (daJiList||[]).map(w =>
     `<span class="ji-tag">${w}</span>`).join('');
-  // wx-zhong-tags 隐藏（五行页不单独显示中行）
-  const wxZhongEl = document.getElementById('wx-zhong-tags');
-  if (wxZhongEl) wxZhongEl.closest('div')?.style && (wxZhongEl.innerHTML = '');
-  // 闲神 = 中性五行
+  // 慎 = 小忌（有才显示）
+  const wxShenWrap = document.getElementById('wx-shen-wrap');
   const wxShenEl = document.getElementById('wx-shen-tags');
-  if (wxShenEl) wxShenEl.innerHTML = zhongList.map(w => `<span class="shen-tag">${w}</span>`).join('');
+  if (wxShenWrap && wxShenEl) {
+    if (xiaoJiList.length > 0) {
+      wxShenWrap.style.display = '';
+      wxShenEl.innerHTML = xiaoJiList.map(w => `<span class="shen-tag">${w}</span>`).join('');
+    } else {
+      wxShenWrap.style.display = 'none';
+    }
+  }
+  // 闲 = 中性五行（有才显示）
+  const wxXianWrap = document.getElementById('wx-xian-wrap');
+  const wxXianEl = document.getElementById('wx-xian-tags');
+  if (wxXianWrap && wxXianEl) {
+    if (zhongList.length > 0) {
+      wxXianWrap.style.display = '';
+      wxXianEl.innerHTML = zhongList.map(w => `<span class="shen-tag">${w}</span>`).join('');
+    } else {
+      wxXianWrap.style.display = 'none';
+    }
+  }
+  // wx-zhong-tags 隐藏
+  const wxZhongEl = document.getElementById('wx-zhong-tags');
+  if (wxZhongEl) wxZhongEl.innerHTML = '';
 
   // 五行旺衰横条图
   const wxRole = (wx) => {
@@ -4402,6 +4426,13 @@ function renderWuxing() {
   const blocksDz = dzLinks.map((lk, i) => lk === 'none' ? `${pillarLabels[i]}→${pillarLabels[i+1]}支` : null).filter(Boolean);
   const allBlocks = [...blocksTg, ...blocksDz];
 
+  // 统计生克比的数量（天干+地支+干支纵向，共10条连接）
+  const allLinks = [...tgLinks, ...dzLinks, ...colLinks];
+  const shengCount = allLinks.filter(l => l === 'sheng').length;
+  const keCount = allLinks.filter(l => l === 'ke').length;
+  const sameCount = allLinks.filter(l => l === 'same').length;
+  const noneCount = allLinks.filter(l => l === 'none' || l === 'gap').length;
+
   const wxPct = {};
   ['木','火','土','金','水'].forEach(wx => { wxPct[wx] = Math.round((stats[wx]||0) / total * 100); });
   const absent = Object.keys(wxPct).filter(wx => wxPct[wx] <= 8);
@@ -4427,9 +4458,21 @@ function renderWuxing() {
     const w = strong[0];
     ltDesc = `${w}气独旺（${wxPct[w]}%），需${WX_SHENG[w]}承接疏泄。`;
     ltAdvice = jiList.includes(w) ? `${w}为忌神且旺，尤需制化` : `关注${WX_SHENG[w]}是否有力承接`;
-  } else {
-    ltDesc = '天干地支各位生克相连，命局气机流转顺畅。';
+  } else if (keCount >= 6) {
+    ltDesc = '天干地支克战激烈，命局气机碰撞频繁，行事多波折阻力。';
+    ltAdvice = '宜寻求通关化解之五行，减少对冲消耗';
+  } else if (keCount >= 4) {
+    ltDesc = '命局克制较多，气机刚猛有冲劲，但摩擦消耗也大。';
+    ltAdvice = '适当引入相生之力缓和，化克为动力';
+  } else if (shengCount >= 6) {
+    ltDesc = '天干地支相生连绵，命局气机流转顺畅，生生不息。';
     ltAdvice = '保持五行均衡，顺势而为即可';
+  } else if (sameCount >= 4) {
+    ltDesc = '命局比劫同气较多，力量集中但缺乏变化。';
+    ltAdvice = '宜引入食伤或官杀打破同质化，增加层次';
+  } else {
+    ltDesc = '天干地支生克并存，命局气机有流有制，动态平衡。';
+    ltAdvice = '生克相济，顺其自然，扬长避短';
   }
   document.getElementById('lt-desc').textContent = ltDesc;
   document.getElementById('lt-advice').textContent = '💡 ' + ltAdvice;
@@ -5036,7 +5079,10 @@ function renderBaziCard(raw, an, qrImg) {
   };
 
   drawTags('喜神', an.xi, 'rgba(126,207,158,0.2)', '#7ecf9e');
-  drawTags('忌神', an.ji, 'rgba(255,119,85,0.15)', '#ff7755');
+  drawTags('忌神', an.daJi||an.ji, 'rgba(255,119,85,0.15)', '#ff7755');
+  if (an.xiaoJi && an.xiaoJi.length) {
+    drawTags('慎', an.xiaoJi, 'rgba(200,180,120,0.15)', '#c8b478');
+  }
 
   // 命局分析摘要（性格）
   infoY += 10;
