@@ -3814,42 +3814,39 @@ function doPaipan() {
 
   const character = charParts.filter(Boolean).join('。').replace(/。。/g,'。').replace(/；。/g,'。') + '。';
 
-  // ── 十神组合特征（核心命理组合，提升精准度）──
+  // ── 十神组合特征（核心命理组合，只看天干透出的十神，避免藏干误判）──
   const ssCombo = [];
   const hasSS = (ss) => allTgSS.includes(ss);
-  const hasDzSS = (ss) => [raw.year.dz,raw.month.dz,raw.day.dz,raw.hour.dz]
-    .flatMap(dz => (DZ_CANGGAN[dz]||[]).map(tg => getShishen(raw.day.tg, tg)))
-    .includes(ss);
 
-  // 伤官配印
-  if ((hasSS('伤官') || hasDzSS('伤官')) && (hasSS('正印') || hasSS('偏印'))) {
+  // 伤官配印（天干有伤官 + 天干有印星）
+  if (hasSS('伤官') && (hasSS('正印') || hasSS('偏印'))) {
     ssCombo.push({name:'伤官配印', desc:'才华横溢且有涵养控制，表达犀利而不失分寸，适合专业技术或学术领域'});
   }
-  // 杀印相生
-  if ((hasSS('七杀') || hasDzSS('七杀')) && (hasSS('正印') || hasSS('偏印'))) {
+  // 杀印相生（天干有七杀 + 天干有印星）
+  if (hasSS('七杀') && (hasSS('正印') || hasSS('偏印'))) {
     ssCombo.push({name:'杀印相生', desc:'权力与智慧兼备，有魄力有谋略，适合军政法或高层管理'});
   }
-  // 食神制杀
-  if ((hasSS('食神') || hasDzSS('食神')) && (hasSS('七杀') || hasDzSS('七杀'))) {
+  // 食神制杀（天干有食神 + 天干有七杀）
+  if (hasSS('食神') && hasSS('七杀')) {
     ssCombo.push({name:'食神制杀', desc:'以柔克刚，化解压力于无形，处事圆融而有策略'});
   }
-  // 财官双美
-  if ((hasSS('正财') || hasSS('偏财')) && (hasSS('正官'))) {
+  // 财官双美（天干有财星 + 天干有正官）
+  if ((hasSS('正财') || hasSS('偏财')) && hasSS('正官')) {
     ssCombo.push({name:'财官双美', desc:'财与名并行，事业稳步上升易获社会认可，富贵双全之象'});
   }
-  // 官印相生
+  // 官印相生（天干有正官 + 天干有印星）
   if (hasSS('正官') && (hasSS('正印') || hasSS('偏印'))) {
     ssCombo.push({name:'官印相生', desc:'权力有学识支撑，做事有章法有后盾，职场晋升运势强'});
   }
-  // 食伤生财
+  // 食伤生财（天干有食伤 + 天干有财星）
   if ((hasSS('食神') || hasSS('伤官')) && (hasSS('正财') || hasSS('偏财'))) {
     ssCombo.push({name:'食伤生财', desc:'靠才华和创意赚钱，适合创业或自由职业，财源来自智慧'});
   }
-  // 枭神夺食
+  // 枭神夺食（天干有偏印 + 天干有食神）
   if (hasSS('偏印') && hasSS('食神')) {
     ssCombo.push({name:'枭神夺食', desc:'才华易被压制，创意灵感常被现实打断，须防好事多磨'});
   }
-  // 伤官见官
+  // 伤官见官（天干有伤官 + 天干有正官）
   if (hasSS('伤官') && hasSS('正官')) {
     ssCombo.push({name:'伤官见官', desc:'内心叛逆与规矩感并存，职场中易与上级产生冲突，宜选择自由度高的工作'});
   }
@@ -4120,9 +4117,9 @@ function doPaipan() {
   ].filter(Boolean);
   const health = healthParts.join('；') + '。';
 
-  // ── 命局综评（十神组合+格局纯杂+用神有力度）──
+  // ── 命局综评（格局解读+十神组合+纯杂度，让用户看得懂）──
   const ssComboStr = ssCombo.length > 0
-    ? ssCombo.slice(0,2).map(c => `【${c.name}】${c.desc}`).join('。') + '。'
+    ? ssCombo.slice(0,2).map(c => `命中【${c.name}】组合：${c.desc}`).join('。') + '。'
     : '';
 
   // 日主十干特性（无组合时补充深度）
@@ -4138,20 +4135,37 @@ function doPaipan() {
     '壬': '壬水大海，胸怀宽广，智慧深沉，善于谋略但需防放纵。',
     '癸': '癸水雨露，滋润无声，心思细密，直觉极强，善于感悟。',
   };
-  const tianGanStr = (!ssCombo.length && tianGanDetail[raw.day.tg]) ? tianGanDetail[raw.day.tg] : '';
+  const tianGanStr = tianGanDetail[raw.day.tg] || '';
+
+  // 格局说明（用大白话解读格局含义）
+  const gejvExplain = {
+    '正官格': `命局取正官格，月令透出管束之力。正官代表规矩、名誉和责任，命主天生有管理才能和秩序感。${ratio>=50?'身旺能担官，仕途顺遂。':'身弱官压力大，需印星化解保护。'}`,
+    '七杀格': `命局取七杀格，月令杀气透出。七杀代表压力、竞争和权威，命主天生不惧挑战。${ratio>=50?'身旺杀为我用，敢打敢拼。':'身弱杀来克身，需印化杀或食伤制杀保平安。'}`,
+    '正印格': `命局取正印格，月令印星当令。正印代表学识、贵人和保护，命主聪慧好学有涵养。${ratio>=50?'身旺印重，印星反成负担，宜泄不宜守。':'身弱有印护身，贵人运强。'}`,
+    '偏印格': `命局取偏印格，月令偏印当令。偏印代表独创思维和专研精神，命主直觉敏锐不走寻常路。${ratio>=50?'身旺枭印过重，须防思虑过度。':'身弱偏印护身，但须防枭神夺食。'}`,
+    '正财格': `命局取正财格，月令财星当令。正财代表稳定收入和务实态度，命主脚踏实地善于积累。${ratio>=50?'身旺可担财，财运稳健。':'身弱财多身扛不住，需印比帮身方能守财。'}`,
+    '偏财格': `命局取偏财格，月令偏财当令。偏财代表灵活多变的财路和社交能力，命主善于发现机遇。${ratio>=50?'身旺偏财为用，商业嗅觉敏锐。':'身弱偏财难守，须防财来财去。'}`,
+    '食神格': `命局取食神格，月令食神当令。食神代表才华、表达和享受，命主才艺出众性情温和。${ratio>=50?'身旺食神泄秀，才华有出口。':'身弱食伤过泄，须防精力消耗过度。'}`,
+    '伤官格': `命局取伤官格，月令伤官当令。伤官代表才华横溢与不拘一格，命主个性鲜明表达犀利。${ratio>=50?'身旺伤官为用，创造力爆棚。':'身弱伤官泄气，须防情绪内耗。'}`,
+    '建禄格': `命局取建禄格，月令比劫当令。建禄代表自立自强，命主独立性极强，不依赖他人。${ratio>=50?'身旺比劫重，须防争夺消耗。':'身中比劫帮身，根基稳固。'}`,
+    '月刃格': `命局取月刃格，月令羊刃当令。月刃代表刚毅果决，命主意志坚定竞争力强。${ratio>=50?'身旺刃锋利，须有官杀制刃方成大器。':'身中有刃帮身，行事有魄力。'}`,
+  };
+  const gejvStr = gejvExplain[gejv] || (congge ? '' : `命局取${gejv}。`);
 
   // 格局纯杂度评估
   const guanShaCount = allTgSS.filter(s => s === '正官' || s === '七杀').length;
   const caiCount = allTgSS.filter(s => s === '正财' || s === '偏财').length;
   const yinCount = allTgSS.filter(s => s === '正印' || s === '偏印').length;
   let purityDesc = '';
-  if (guanShaCount >= 2 && hasSS('正官') && hasSS('七杀')) purityDesc = '官杀混杂，命局稍显浊乱，须有制化方成器。';
-  else if (caiCount >= 2 && hasSS('正财') && hasSS('偏财')) purityDesc = '正偏财混杂，财路多元但精力分散，须专注方向。';
-  else if (ssCombo.some(c => c.name === '枭神夺食') || ssCombo.some(c => c.name === '伤官见官')) purityDesc = '命局有克战组合，人生多波折考验，化解后反成动力。';
-  else if (ssCombo.some(c => ['财官双美','官印相生','杀印相生','食伤生财'].includes(c.name))) purityDesc = '命局组合精良，格局纯正有力，先天条件优越。';
-  else purityDesc = '命局五行流转，格局中正，稳步发展。';
+  if (guanShaCount >= 2 && hasSS('正官') && hasSS('七杀')) purityDesc = '天干官杀混杂，命局稍显浊乱，须有印星化解或食伤制杀方成器。';
+  else if (caiCount >= 2 && hasSS('正财') && hasSS('偏财')) purityDesc = '天干正偏财混杂，财路多元但精力分散，宜集中方向专注发展。';
+  else if (ssCombo.some(c => c.name === '枭神夺食') || ssCombo.some(c => c.name === '伤官见官')) purityDesc = '命局有克战组合，人生多波折考验，但化解得当反能激发潜能。';
+  else if (ssCombo.some(c => ['财官双美','官印相生','杀印相生','食伤生财','伤官配印'].includes(c.name))) purityDesc = '命局十神组合精良，格局纯正有力，先天条件优越。';
+  else purityDesc = '命局五行各有位置，格局中正，宜稳步发展。';
 
-  const overview = tianGanStr + ssComboStr + purityDesc;
+  // 组装综评：日干特性 + 格局解读 + 十神组合 + 纯杂度
+  const overviewParts = [tianGanStr, gejvStr, ssComboStr, purityDesc].filter(Boolean);
+  const overview = overviewParts.join('');
 
   raw.analysis = {
     gejv, gejvDesc,
