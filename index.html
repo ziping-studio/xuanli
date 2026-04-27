@@ -576,16 +576,19 @@ body {
 
 /* ── 大运页 ── */
 .dayun-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:14px; }
-.dayun-item { background:var(--bg3); border:1px solid var(--border); border-radius:9px; padding:8px 3px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:3px; }
+.dayun-item { background:var(--bg3); border:1px solid var(--border); border-radius:9px; padding:8px 3px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; transition:border-color .2s; }
 .dayun-item.current { border-color:var(--gold); background:rgba(201,168,76,0.08); }
+.dayun-item.selected { border-color:#6ec6ff; background:rgba(110,198,255,0.12); }
 .dayun-tg,.dayun-dz { font-size:22px; font-weight:600; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:7px; }
 .dayun-age { font-size:10px; color:var(--text2); }
 .dayun-year-sm { font-size:9px; color:var(--text3); }
-.liunian-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; }
-.ly-item { background:var(--bg3); border:1px solid var(--border); border-radius:7px; padding:6px 2px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:2px; }
+.liunian-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.ly-item { background:var(--bg3); border:1px solid var(--border); border-radius:9px; padding:8px 3px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; transition:border-color .2s; }
 .ly-item.current-year { border-color:var(--gold); background:rgba(201,168,76,0.08); }
-.ly-year { font-size:9px; color:var(--text3); }
-.ly-tg,.ly-dz { font-size:16px; font-weight:600; width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:5px; }
+.ly-item.selected { border-color:#6ec6ff; background:rgba(110,198,255,0.12); }
+.ly-tg,.ly-dz { font-size:20px; font-weight:600; width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:7px; }
+.ly-year { font-size:10px; color:var(--text3); }
+.ly-age { font-size:9px; color:var(--text3); }
 
 /* ── 婚配页 ── */
 .hp-score-ring { text-align:center; padding:20px 0 16px; }
@@ -850,8 +853,12 @@ body {
         <div class="dayun-grid" id="dayun-grid"></div>
       </div>
       <div class="card">
-        <div class="card-title">流年（近25年）</div>
+        <div class="card-title" id="liunian-title">流年</div>
         <div class="liunian-grid" id="liunian-grid"></div>
+      </div>
+      <div class="card" id="dayun-detail-card" style="display:none">
+        <div class="card-title" id="dayun-detail-title">运势详解</div>
+        <div id="dayun-detail-body" style="font-size:13px;color:var(--text2);line-height:1.9"></div>
       </div>
     </div>
   </div>
@@ -1984,6 +1991,28 @@ const CHANGSHENG_SCORE = {
   '水': {申:3,酉:2,戌:1,亥:4,子:5,丑:2,寅:0,卯:0,辰:1,巳:0,午:0,未:0},
 };
 
+// 十二长生名称表：按阳干顺行序（长生→养）
+const CHANGSHENG_ORDER = ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养'];
+// 各日干对应的长生起始地支（阳干顺行，阴干逆行）
+const CHANGSHENG_MAP = {
+  '甲': {亥:'长生',子:'沐浴',丑:'冠带',寅:'临官',卯:'帝旺',辰:'衰',巳:'病',午:'死',未:'墓',申:'绝',酉:'胎',戌:'养'},
+  '丙': {寅:'长生',卯:'沐浴',辰:'冠带',巳:'临官',午:'帝旺',未:'衰',申:'病',酉:'死',戌:'墓',亥:'绝',子:'胎',丑:'养'},
+  '戊': {寅:'长生',卯:'沐浴',辰:'冠带',巳:'临官',午:'帝旺',未:'衰',申:'病',酉:'死',戌:'墓',亥:'绝',子:'胎',丑:'养'},
+  '庚': {巳:'长生',午:'沐浴',未:'冠带',申:'临官',酉:'帝旺',戌:'衰',亥:'病',子:'死',丑:'墓',寅:'绝',卯:'胎',辰:'养'},
+  '壬': {申:'长生',酉:'沐浴',戌:'冠带',亥:'临官',子:'帝旺',丑:'衰',寅:'病',卯:'死',辰:'墓',巳:'绝',午:'胎',未:'养'},
+  // 阴干逆行
+  '乙': {午:'长生',巳:'沐浴',辰:'冠带',卯:'临官',寅:'帝旺',丑:'衰',子:'病',亥:'死',戌:'墓',酉:'绝',申:'胎',未:'养'},
+  '丁': {酉:'长生',申:'沐浴',未:'冠带',午:'临官',巳:'帝旺',辰:'衰',卯:'病',寅:'死',丑:'墓',子:'绝',亥:'胎',戌:'养'},
+  '己': {酉:'长生',申:'沐浴',未:'冠带',午:'临官',巳:'帝旺',辰:'衰',卯:'病',寅:'死',丑:'墓',子:'绝',亥:'胎',戌:'养'},
+  '辛': {子:'长生',亥:'沐浴',戌:'冠带',酉:'临官',申:'帝旺',未:'衰',午:'病',巳:'死',辰:'墓',卯:'绝',寅:'胎',丑:'养'},
+  '癸': {卯:'长生',寅:'沐浴',丑:'冠带',子:'临官',亥:'帝旺',戌:'衰',酉:'病',申:'死',未:'墓',午:'绝',巳:'胎',辰:'养'},
+};
+
+function getChangSheng(dayTg, dz) {
+  const map = CHANGSHENG_MAP[dayTg];
+  return map ? (map[dz] || '') : '';
+}
+
 
 function calcQiangRuo(bazi) {
   const dmWx = TG_WX[bazi.day.tg];
@@ -2421,6 +2450,7 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
 
   const reasons = [];
   const forceJiSet = new Set(); // 追踪大忌（格局/病药强制降忌）
+  const forceXiSet = new Set(); // 追踪格局强制喜（病药不覆盖）
 
   // ===== 1. 旺衰基础喜忌（三档）=====
   let xiBase = [], zhongBase = [], jiBase = [];
@@ -2540,16 +2570,17 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
         中: { add_xi: [caiXing], force_ji: [guanSha, ...(shiShenPct>=0.25?[shiShen]:[])], add_zhong: [yinShu], note: '伤官格身中，配财为先，忌官；印归闲；食伤极旺时亦忌' },
       };
     })(),
-    // 建禄格/月刃格：身旺旺衰已正确；身中官在忌需提升
+    // 建禄格/月刃格：月令比劫当令，天然身旺
+    // 身中时也按身旺策略处理（喜泄耗，忌帮扶）
     '建禄格': {
-      旺: { note: '建禄格身强，官财为用，忌印比助旺' },
+      旺: { force_xi: [shiShen, caiXing], force_ji: [yinShu, biJie], note: '建禄格身强，喜食伤泄秀、财星耗身，忌印比助旺' },
       弱: { note: '建禄格但身弱，以印比扶身' },
-      中: { force_xi: [guanSha], add_zhong: [caiXing], note: '建禄格身中，官为首用（官从忌提升），财中性可取' },
+      中: { force_xi: [guanSha, caiXing], move_xi_to_ji: [yinShu, biJie], add_zhong: [shiShen], note: '建禄格月令比劫当令天然偏旺，喜官杀制比、财星耗身，忌印比再助' },
     },
     '月刃格': {
-      旺: { note: '月刃格极强，须官杀制刃，忌印比助刃' },
+      旺: { force_xi: [guanSha, shiShen], force_ji: [yinShu, biJie], note: '月刃格极强，须官杀制刃、食伤泄秀，忌印比助刃' },
       弱: { note: '月刃格但身弱，以印比生扶' },
-      中: { force_xi: [guanSha], add_zhong: [caiXing], note: '月刃格身中偏旺，官杀制刃为首用（官从忌提升），财中性' },
+      中: { force_xi: [guanSha, caiXing], move_xi_to_ji: [yinShu, biJie], add_zhong: [shiShen], note: '月刃格月令羊刃当令天然偏旺，官杀制刃为首用，财星耗泄为辅，忌印比再助' },
     },
   };
 
@@ -2562,6 +2593,7 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
       let i = jiBase.indexOf(w); if (i >= 0) jiBase.splice(i, 1);
       i = zhongBase.indexOf(w); if (i >= 0) zhongBase.splice(i, 1);
       if (!xiBase.includes(w)) xiBase.push(w);
+      forceXiSet.add(w); // 保护：病药不覆盖格局强制喜
     });
     // force_ji：格局强制忌（大忌），记录到forceJiSet
     if (adj.force_ji) adj.force_ji.forEach(w => {
@@ -2576,6 +2608,15 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
       if (!w) return;
       const i = xiBase.indexOf(w);
       if (i >= 0) { xiBase.splice(i, 1); if (!zhongBase.includes(w)) zhongBase.push(w); }
+    });
+    // move_xi_to_ji：把xiBase里某五行降为忌（建禄/月刃身中时印比从喜降为忌）
+    if (adj.move_xi_to_ji) adj.move_xi_to_ji.forEach(w => {
+      if (!w) return;
+      const i = xiBase.indexOf(w);
+      if (i >= 0) { xiBase.splice(i, 1); }
+      const z = zhongBase.indexOf(w);
+      if (z >= 0) { zhongBase.splice(z, 1); }
+      if (!jiBase.includes(w)) { jiBase.push(w); forceJiSet.add(w); }
     });
     // move_ji_to_zhong：把jiBase里某五行降为中性
     if (adj.move_ji_to_zhong) adj.move_ji_to_zhong.forEach(w => {
@@ -2659,6 +2700,33 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
     }
   });
 
+  // ===== 3b. 穷通宝鉴特殊调候规则 =====
+  // 规则1：庚金劈甲引丁
+  // 条件：丁火日主 + 秋冬月令(申酉戌亥子丑) + 印星(木)天干>=2个
+  // 效果：金(财星)从忌升为喜（庚金劈开甲木才能引燃丁火）
+  //        木如果>=3个天干，从喜降为慎（木多火塞）
+  if (dmWx === '火' && bazi.day.tg === '丁' && ['申','酉','戌','亥','子','丑'].includes(monthDz)) {
+    const yinTgCount = allTg.filter(tg => TG_WX[tg] === '木').length;
+    if (yinTgCount >= 2) {
+      // 金升喜（劈甲引丁）
+      const jinIdx = jiBase.indexOf('金');
+      if (jinIdx >= 0) {
+        jiBase.splice(jinIdx, 1);
+        if (!xiBase.includes('金')) xiBase.push('金');
+        reasons.push(`【调候】秋冬丁火，庚金劈甲引丁，金从忌升为喜`);
+      }
+      // 木多火塞：木>=3个天干时降为慎
+      if (yinTgCount >= 3) {
+        const muIdx = xiBase.indexOf('木');
+        if (muIdx >= 0) {
+          xiBase.splice(muIdx, 1);
+          if (!zhongBase.includes('木')) zhongBase.push('木');
+          reasons.push(`【调候】印星(木)过多，木多火塞，木降为慎`);
+        }
+      }
+    }
+  }
+
   // ===== 病药撤销 路径A：被克方同党过旺（偏枯），克方为药 =====
   // 适用场景：某五行X被force_ji，但X克的方向极旺（>40%）而X极少（<18%）→ X反为药
   // 豁免规则（防误触发）：
@@ -2726,7 +2794,7 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
   //   2. 伤官格/食神格——格局层已有专用处理（peiYin模式等）
   //   3. 官杀本身已在喜里（说明格局层有特殊用法，如七杀格食伤制杀已处理）
   const shiPct5b = (wxCount[shiShen]||0) / (Object.values(wxCount).reduce((a,b)=>a+b,0)||1);
-  const shiGejvExempt = ['伤官格','食神格'].includes(gejvName);
+  const shiGejvExempt = ['伤官格','食神格','建禄格','月刃格'].includes(gejvName);
   if (!isRuo && !shiGejvExempt && shiPct5b >= 0.30) {
     // 食伤过旺：从喜/中移除，官杀/财降忌
     const shiIdx = xiBase.indexOf(shiShen);
@@ -2734,12 +2802,15 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
     const shiZhongIdx = zhongBase.indexOf(shiShen);
     if (shiZhongIdx >= 0) zhongBase.splice(shiZhongIdx, 1);
     // 官杀——格局层通常已处理，若仍在喜里则撤销（食伤已旺，官再来克身为双重负担）
-    const guanIdx5b = xiBase.indexOf(guanSha);
-    if (guanIdx5b >= 0) xiBase.splice(guanIdx5b, 1);
-    if (!jiBase.includes(guanSha)) { jiBase.push(guanSha); forceJiSet.add(guanSha); }
+    // 豁免：格局force_xi保护的五行不降
+    if (!forceXiSet.has(guanSha)) {
+      const guanIdx5b = xiBase.indexOf(guanSha);
+      if (guanIdx5b >= 0) xiBase.splice(guanIdx5b, 1);
+      if (!jiBase.includes(guanSha)) { jiBase.push(guanSha); forceJiSet.add(guanSha); }
+    }
     // 财（生官助压力）降忌——豁免：正财格/偏财格以财为格局核心，不降
     const caiGejvNeeds = ['正财格','偏财格'].includes(gejvName);
-    if (!caiGejvNeeds) {
+    if (!caiGejvNeeds && !forceXiSet.has(caiXing)) {
       const caiIdx5b = xiBase.indexOf(caiXing);
       if (caiIdx5b >= 0) xiBase.splice(caiIdx5b, 1);
       const caiZhongIdx5b = zhongBase.indexOf(caiXing);
@@ -2942,27 +3013,9 @@ function calcGejv(bazi) {
           }
         }
         if (!changed) {
-          // 藏干无透 → 看天干有无非比劫透干（弃月令寻他干）
-          const yangFirst = ['食神','正官','正印','正财'];
-          const cats = [['食神','伤官'],['正财','偏财'],['正官','七杀'],['正印','偏印']];
-          if (Object.keys(ssCounts).length > 0) {
-            const catTotal = {};
-            cats.forEach(cat => {
-              const total = cat.reduce((s,ss)=>s+(ssCounts[ss]||0),0);
-              if (total > 0) catTotal[cat.join('/')] = {total, cat};
-            });
-            const topCat = Object.entries(catTotal).sort((a,b)=>b[1].total-a[1].total)[0];
-            if (topCat) {
-              finalSS = topCat[1].cat.find(s=>yangFirst.includes(s)) || topCat[1].cat[0];
-              touGanMark = '（建禄变格）';
-            } else {
-              finalSS = isYueRen ? '劫财' : '比肩';
-              touGanMark = '';
-            }
-          } else {
-            finalSS = isYueRen ? '劫财' : '比肩';
-            touGanMark = '';
-          }
+          // 藏干无透 → 维持建禄/月刃格（不因天干有其他十神而变格）
+          finalSS = isYueRen ? '劫财' : '比肩';
+          touGanMark = '';
         }
       } else {
         // 本气是比劫但不是建禄/羊刃月（如丑月己劫财）
@@ -4273,6 +4326,24 @@ function renderPaipanResult(raw) {
     ${pillars.map(p => `<td><span class="nayin-text">${raw[p].nayin||''}</span></td>`).join('')}
   </tr>`;
 
+  // 行5b：星运（十二长生 - 日干对四支）
+  const rowCS = `<tr>
+    <td class="row-label">星运</td>
+    ${pillars.map(p => {
+      const cs = getChangSheng(raw.day.tg, raw[p].dz);
+      return `<td><span class="nayin-text">${cs}</span></td>`;
+    }).join('')}
+  </tr>`;
+
+  // 行5c：自坐（各天干对自己地支的十二长生）
+  const rowZZ = `<tr>
+    <td class="row-label">自坐</td>
+    ${pillars.map(p => {
+      const cs = getChangSheng(raw[p].tg, raw[p].dz);
+      return `<td><span class="nayin-text">${cs}</span></td>`;
+    }).join('')}
+  </tr>`;
+
   // 行7：神煞
   // 神煞行：直接用 col 字段定位
   const colSzMap = [[],[],[],[]];
@@ -4285,7 +4356,7 @@ function renderPaipanResult(raw) {
     }).join('')}
   </tr>` : '';
 
-  grid.innerHTML = rowHeader + rowSS + rowTG + rowDZ + rowCG + rowNY + rowSZ;
+  grid.innerHTML = rowHeader + rowSS + rowTG + rowDZ + rowCG + rowCS + rowZZ + rowNY + rowSZ;
 
   // 日主、身强弱、格局
   const dmWx = raw.dayMasterWx;
@@ -4771,15 +4842,20 @@ function renderDayun() {
   const currentYear = new Date().getFullYear();
   const currentAge = currentYear - input.year;
 
+  // 计算喜忌（供大运详解使用）
+  const qr = calcQiangRuo(bazi);
+  const gejvInfo = calcGejv(bazi);
+  const xiji = calcXiJi(bazi, bazi.dayMasterWx, qr.isQiang, qr.ratio, gejvInfo);
+
   document.getElementById('dayun-info').textContent =
     `${isShun ? '顺行' : '逆行'}大运，${startAge}岁${startMonth > 0 ? startMonth + '个月' : ''}起运`;
 
-  document.getElementById('dayun-grid').innerHTML = dayuns.map(d => {
+  document.getElementById('dayun-grid').innerHTML = dayuns.map((d, i) => {
     const tgCss = WX_CSS[d.tgWx] || 'earth';
     const dzCss = WX_CSS[d.dzWx] || 'earth';
     const isCurr = currentAge >= d.startAge && currentAge < d.startAge + 10;
     return `
-      <div class="dayun-item${isCurr ? ' current' : ''}">
+      <div class="dayun-item${isCurr ? ' current' : ''}" data-dy-idx="${i}" onclick="selectDayun(${i})">
         <div class="dayun-tg ${tgCss}">${d.tg}</div>
         <div class="dayun-dz ${dzCss}">${d.dz}</div>
         <div class="dayun-age">${d.startAge + 1}岁</div>
@@ -4787,17 +4863,165 @@ function renderDayun() {
       </div>`;
   }).join('');
 
-  const liunians = calcLiunian(currentYear - 5, 25);
-  document.getElementById('liunian-grid').innerHTML = liunians.map(ly => {
+  // 流年由选中大运触发
+  AppState._dyData = { dayuns, bazi, input, xiji };
+
+  // 自动选中当前大运（同时渲染对应流年）
+  const currDyIdx = dayuns.findIndex(d => currentAge >= d.startAge && currentAge < d.startAge + 10);
+  if (currDyIdx >= 0) selectDayun(currDyIdx);
+  else selectDayun(0);
+}
+
+function renderLiunianForDayun(dyIdx) {
+  const d = AppState._dyData;
+  if (!d) return;
+  const dy = d.dayuns[dyIdx];
+  const startYear = dy.startYear;
+  const currentYear = new Date().getFullYear();
+  const liunians = calcLiunian(startYear, 10);
+  
+  document.getElementById('liunian-title').textContent = `流年（${startYear}-${startYear + 9}）`;
+  
+  const gridHtml = liunians.map(ly => {
     const tgCss = WX_CSS[ly.tgWx] || 'earth';
     const dzCss = WX_CSS[ly.dzWx] || 'earth';
+    const age = ly.year - d.input.year + 1;
     return `
-      <div class="ly-item${ly.year === currentYear ? ' current-year' : ''}">
+      <div class="ly-item${ly.year === currentYear ? ' current-year' : ''}" data-ly-year="${ly.year}" onclick="selectLiunian(${ly.year})">
         <div class="ly-year">${ly.year}</div>
         <div class="ly-tg ${tgCss}">${ly.tg}</div>
         <div class="ly-dz ${dzCss}">${ly.dz}</div>
+        <div class="ly-age">${age}岁</div>
       </div>`;
   }).join('');
+  
+  document.getElementById('liunian-grid').innerHTML = gridHtml;
+}
+
+function selectDayun(idx) {
+  document.querySelectorAll('.dayun-item.selected').forEach(e => e.classList.remove('selected'));
+  document.querySelectorAll('.ly-item.selected').forEach(e => e.classList.remove('selected'));
+  const el = document.querySelector(`[data-dy-idx="${idx}"]`);
+  if (el) el.classList.add('selected');
+  
+  // 渲染该大运对应的10年流年
+  renderLiunianForDayun(idx);
+  
+  const d = AppState._dyData;
+  if (!d) return;
+  const dy = d.dayuns[idx];
+  showDayunDetail('大运', dy.tg, dy.dz, dy.tgWx, dy.dzWx, `${dy.startYear}-${dy.startYear+9}年（${dy.startAge+1}-${dy.startAge+10}岁）`, d.bazi, d.xiji);
+}
+
+function selectLiunian(year) {
+  document.querySelectorAll('.dayun-item.selected').forEach(e => e.classList.remove('selected'));
+  document.querySelectorAll('.ly-item.selected').forEach(e => e.classList.remove('selected'));
+  const el = document.querySelector(`[data-ly-year="${year}"]`);
+  if (el) el.classList.add('selected');
+  
+  const d = AppState._dyData;
+  if (!d) return;
+  const pillar = getYearPillar(year);
+  const tgWx = TG_WX[pillar.tg];
+  const dzWx = DZ_BEN[pillar.dz] || '';
+  const age = year - d.input.year + 1;
+  showDayunDetail('流年', pillar.tg, pillar.dz, tgWx, dzWx, `${year}年（${age}岁）`, d.bazi, d.xiji);
+}
+
+function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji) {
+  const card = document.getElementById('dayun-detail-card');
+  card.style.display = 'block';
+  document.getElementById('dayun-detail-title').textContent = `${type}详解：${tg}${dz}`;
+  
+  const dmTg = bazi.day.tg;
+  const dmWx = bazi.dayMasterWx;
+  const xi = xiji.xi || [];
+  const ji = [...(xiji.daJi||[]),...(xiji.xiaoJi||[])];
+  const pillars = ['year','month','day','hour'];
+  const pillarNames = ['年柱','月柱','日柱','时柱'];
+  
+  const wxColor = (wx) => ({木:'#4caf50',火:'#ef5350',土:'#c9a84c',金:'#bbb',水:'#42a5f5'}[wx]||'#888');
+  
+  // 天干关系：运干 vs 原局四天干
+  const tgParts = [];
+  pillars.forEach((p, i) => {
+    const oTg = bazi[p].tg;
+    const oWx = TG_WX[oTg];
+    if (p === 'day') return; // 日干单独处理
+    const ss = getShishen(oTg, tg); // 运干对原局天干的十神
+    const rel = getTgRelation(oWx, tgWx);
+    tgParts.push(`<span style="color:${wxColor(oWx)}">${oTg}</span>${rel}<span style="color:${wxColor(tgWx)}">${tg}</span>`);
+  });
+  // 运干对日主
+  const dmSS = getShishen(dmTg, tg);
+  const dmRel = getTgRelation(dmWx, tgWx);
+  
+  // 地支关系：运支 vs 原局四地支（合冲刑害）
+  const liuhe = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']];
+  const chong = [['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']];
+  const xing = [['寅','巳','申'],['丑','戌','未'],['子','卯'],['辰','辰'],['午','午'],['酉','酉'],['亥','亥']];
+  const hai = [['子','未'],['丑','午'],['寅','巳'],['卯','辰'],['申','亥'],['酉','戌']];
+  const dzParts = [];
+  const dzList = pillars.map(p => bazi[p].dz);
+  dzList.forEach((odz, i) => {
+    const rels = [];
+    if (liuhe.some(p => (p[0]===dz&&p[1]===odz)||(p[1]===dz&&p[0]===odz)))
+      rels.push(`<span style="color:#4ecdc4">六合</span>`);
+    if (chong.some(p => (p[0]===dz&&p[1]===odz)||(p[1]===dz&&p[0]===odz)))
+      rels.push(`<span style="color:#f44">相冲</span>`);
+    if (xing.some(g => g.includes(dz) && g.includes(odz) && dz !== odz))
+      rels.push(`<span style="color:#ff9800">相刑</span>`);
+    if (hai.some(p => (p[0]===dz&&p[1]===odz)||(p[1]===dz&&p[0]===odz)))
+      rels.push(`<span style="color:#ce93d8">相害</span>`);
+    if (rels.length) {
+      dzParts.push(`${dz}${odz} ${rels.join(' ')}（${pillarNames[i]}）`);
+    }
+  });
+  
+  const html = `
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">${label}</div>
+    <div style="display:flex;gap:4px;margin-bottom:14px;justify-content:center">
+      ${pillars.map((p,i) => {
+        const t = bazi[p].tg, d2 = bazi[p].dz;
+        const tc = wxColor(TG_WX[t]), dc = wxColor(DZ_BEN[d2]);
+        return `<div style="text-align:center;background:var(--bg2);border-radius:8px;padding:6px 10px;flex:1;max-width:72px">
+          <div style="font-size:9px;color:var(--text3)">${pillarNames[i]}</div>
+          <div style="font-size:20px;font-weight:700;color:${tc}">${t}</div>
+          <div style="font-size:20px;font-weight:700;color:${dc}">${d2}</div>
+        </div>`;
+      }).join('')}
+      <div style="text-align:center;padding:6px 10px;flex:1;max-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="font-size:9px;color:var(--text3)">${type}</div>
+        <div style="font-size:20px;font-weight:700;color:${wxColor(tgWx)}">${tg}</div>
+        <div style="font-size:20px;font-weight:700;color:${wxColor(dzWx)}">${dz}</div>
+      </div>
+    </div>
+    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">天干关系</div>
+      <div style="font-size:13px;color:var(--text2);line-height:2.2">
+        ${tg}（${tgWx}·${dmSS}）${dmRel}<span style="color:${wxColor(dmWx)}">${dmTg}</span>日主<br>
+        ${tgParts.join('<br>')}
+      </div>
+    </div>
+    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">地支关系</div>
+      <div style="font-size:13px;color:var(--text2);line-height:2.2">
+        ${dzParts.length ? dzParts.join('<br>') : `${dz}与原局无冲合刑害`}
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('dayun-detail-body').innerHTML = html;
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function getTgRelation(wx1, wx2) {
+  if (wx1 === wx2) return '同气助';
+  if (WX_SHENG[wx1] === wx2) return '生';
+  if (WX_KE[wx1] === wx2) return '克';
+  if (WX_GEN[wx1] === wx2) return '得·生于';
+  if (WX_KE_WO[wx1] === wx2) return '受克于';
+  return '与';
 }
 
 function getHpSolar(side) {
