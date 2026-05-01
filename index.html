@@ -1827,7 +1827,7 @@ const lunarInfo = [
   // 1980-1989
   0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
   // 1990-1999（1995闰8月、1998闰5月已按香港天文台精确月份数据修正）
-  0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x05e58,0x05ac0,0x0ad60,0x0aab5,0x091e0,
+  0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x05ac0,0x0ab60,0x096d5,0x092e0,
   // 2000-2009（按香港天文台月份初一数据精确修正）
   0x0a950,0x0d4b4,0x0d520,0x0b530,0x06d52,0x056a0,0x0abb7,0x02570,0x08ab0,0x0cab5,
   // 2010-2019
@@ -4925,13 +4925,17 @@ function selectLiunian(year) {
   const tgWx = TG_WX[pillar.tg];
   const dzWx = DZ_BEN[pillar.dz] || '';
   const age = year - d.input.year + 1;
-  showDayunDetail('流年', pillar.tg, pillar.dz, tgWx, dzWx, `${year}年（${age}岁）`, d.bazi, d.xiji);
+  // 找到该流年所在的大运
+  const currentAge = year - d.input.year;
+  const dyIdx = d.dayuns.findIndex(dy => currentAge >= dy.startAge && currentAge < dy.startAge + 10);
+  const dy = dyIdx >= 0 ? d.dayuns[dyIdx] : null;
+  showDayunDetail('流年', pillar.tg, pillar.dz, tgWx, dzWx, `${year}年（${age}岁）`, d.bazi, d.xiji, dy);
 }
 
-function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji) {
+function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji, dy) {
   const card = document.getElementById('dayun-detail-card');
   card.style.display = 'block';
-  document.getElementById('dayun-detail-title').textContent = `${type}详解：${tg}${dz}`;
+  document.getElementById('dayun-detail-title').textContent = type === '流年' && dy ? `大运${dy.tg}${dy.dz} · 流年${tg}${dz}` : `${type}详解：${tg}${dz}`;
   
   const dmTg = bazi.day.tg;
   const dmWx = bazi.dayMasterWx;
@@ -4942,76 +4946,80 @@ function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji) {
   
   const wxColor = (wx) => ({木:'#4caf50',火:'#ef5350',土:'#c9a84c',金:'#bbb',水:'#42a5f5'}[wx]||'#888');
   
-  // 天干关系：运干 vs 原局四天干
-  const tgParts = [];
-  pillars.forEach((p, i) => {
-    const oTg = bazi[p].tg;
-    const oWx = TG_WX[oTg];
-    if (p === 'day') return; // 日干单独处理
-    const ss = getShishen(oTg, tg); // 运干对原局天干的十神
-    const rel = getTgRelation(oWx, tgWx);
-    tgParts.push(`<span style="color:${wxColor(oWx)}">${oTg}</span>${rel}<span style="color:${wxColor(tgWx)}">${tg}</span>`);
-  });
-  // 运干对日主
-  const dmSS = getShishen(dmTg, tg);
-  const dmRel = getTgRelation(dmWx, tgWx);
+  // 生成某个干支与原局关系的HTML
+  function buildRelHtml(rTg, rDz, rTgWx, rDzWx, rLabel) {
+    const dmSS = getShishen(dmTg, rTg);
+    const tgHeMap = {'甲':'己','乙':'庚','丙':'辛','丁':'壬','戊':'癸','己':'甲','庚':'乙','辛':'丙','壬':'丁','癸':'戊'};
+    
+    const items = [];
+    items.push(`<span style="color:${wxColor(rTgWx)};font-weight:600">${rTg}</span>（${rTgWx}·${dmSS}）`);
+    
+    // 天干合（只列合，不列克/生）
+    if (tgHeMap[rTg] === dmTg) items.push(`<span style="color:#4ecdc4">${rTg}${dmTg}合</span>（合日主）`);
+    pillars.forEach((p, i) => {
+      if (p === 'day') return;
+      if (tgHeMap[rTg] === bazi[p].tg) items.push(`<span style="color:#4ecdc4">${rTg}${bazi[p].tg}合</span>（${pillarNames[i]}）`);
+    });
+    
+    // 地支合冲刑害
+    const liuhe = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']];
+    const chong2 = [['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']];
+    const xing2 = [['寅','巳','申'],['丑','戌','未'],['子','卯'],['辰','辰'],['午','午'],['酉','酉'],['亥','亥']];
+    const hai2 = [['子','未'],['丑','午'],['寅','巳'],['卯','辰'],['申','亥'],['酉','戌']];
+    pillars.map(p => bazi[p].dz).forEach((odz, i) => {
+      const rels = [];
+      if (liuhe.some(p => (p[0]===rDz&&p[1]===odz)||(p[1]===rDz&&p[0]===odz))) rels.push(`<span style="color:#4ecdc4">六合</span>`);
+      if (chong2.some(p => (p[0]===rDz&&p[1]===odz)||(p[1]===rDz&&p[0]===odz))) rels.push(`<span style="color:#f44">相冲</span>`);
+      if (xing2.some(g => g.includes(rDz) && g.includes(odz) && rDz !== odz)) rels.push(`<span style="color:#ff9800">相刑</span>`);
+      if (hai2.some(p => (p[0]===rDz&&p[1]===odz)||(p[1]===rDz&&p[0]===odz))) rels.push(`<span style="color:#ce93d8">相害</span>`);
+      if (rels.length) items.push(`${rDz}${odz} ${rels.join(' ')}（${pillarNames[i]}）`);
+    });
+    
+    if (items.length <= 1) items.push(`<span style="color:var(--text3)">与原局无合冲刑害</span>`);
+    
+    return `<div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${rLabel} ${rTg}${rDz}</div>
+      <div style="font-size:13px;color:var(--text2);line-height:2">${items.join('<br>')}</div>
+    </div>`;
+  }
   
-  // 地支关系：运支 vs 原局四地支（合冲刑害）
-  const liuhe = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']];
-  const chong = [['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']];
-  const xing = [['寅','巳','申'],['丑','戌','未'],['子','卯'],['辰','辰'],['午','午'],['酉','酉'],['亥','亥']];
-  const hai = [['子','未'],['丑','午'],['寅','巳'],['卯','辰'],['申','亥'],['酉','戌']];
-  const dzParts = [];
-  const dzList = pillars.map(p => bazi[p].dz);
-  dzList.forEach((odz, i) => {
-    const rels = [];
-    if (liuhe.some(p => (p[0]===dz&&p[1]===odz)||(p[1]===dz&&p[0]===odz)))
-      rels.push(`<span style="color:#4ecdc4">六合</span>`);
-    if (chong.some(p => (p[0]===dz&&p[1]===odz)||(p[1]===dz&&p[0]===odz)))
-      rels.push(`<span style="color:#f44">相冲</span>`);
-    if (xing.some(g => g.includes(dz) && g.includes(odz) && dz !== odz))
-      rels.push(`<span style="color:#ff9800">相刑</span>`);
-    if (hai.some(p => (p[0]===dz&&p[1]===odz)||(p[1]===dz&&p[0]===odz)))
-      rels.push(`<span style="color:#ce93d8">相害</span>`);
-    if (rels.length) {
-      dzParts.push(`${dz}${odz} ${rels.join(' ')}（${pillarNames[i]}）`);
-    }
-  });
+  // 顶部原局+运柱展示
+  let topPillars = pillars.map((p,i) => {
+    const t = bazi[p].tg, d2 = bazi[p].dz;
+    return `<div style="text-align:center;background:var(--bg2);border-radius:8px;padding:6px 10px;flex:1;max-width:72px">
+      <div style="font-size:9px;color:var(--text3)">${pillarNames[i]}</div>
+      <div style="font-size:20px;font-weight:700;color:${wxColor(TG_WX[t])}">${t}</div>
+      <div style="font-size:20px;font-weight:700;color:${wxColor(DZ_BEN[d2])}">${d2}</div>
+    </div>`;
+  }).join('');
   
-  const html = `
+  // 右侧运柱
+  if (type === '流年' && dy) {
+    topPillars += `<div style="text-align:center;border:1px solid var(--border);border-radius:8px;padding:6px 6px;flex:1;max-width:72px">
+      <div style="font-size:9px;color:var(--text3)">大运</div>
+      <div style="font-size:18px;font-weight:700;color:${wxColor(dy.tgWx)}">${dy.tg}</div>
+      <div style="font-size:18px;font-weight:700;color:${wxColor(dy.dzWx)}">${dy.dz}</div>
+    </div>`;
+  }
+  topPillars += `<div style="text-align:center;border:1px solid var(--gold);border-radius:8px;padding:6px 6px;flex:1;max-width:72px">
+    <div style="font-size:9px;color:var(--gold)">${type}</div>
+    <div style="font-size:18px;font-weight:700;color:${wxColor(tgWx)}">${tg}</div>
+    <div style="font-size:18px;font-weight:700;color:${wxColor(dzWx)}">${dz}</div>
+  </div>`;
+
+  // 组装HTML
+  let bodyHtml = `
     <div style="font-size:12px;color:var(--text3);margin-bottom:12px">${label}</div>
-    <div style="display:flex;gap:4px;margin-bottom:14px;justify-content:center">
-      ${pillars.map((p,i) => {
-        const t = bazi[p].tg, d2 = bazi[p].dz;
-        const tc = wxColor(TG_WX[t]), dc = wxColor(DZ_BEN[d2]);
-        return `<div style="text-align:center;background:var(--bg2);border-radius:8px;padding:6px 10px;flex:1;max-width:72px">
-          <div style="font-size:9px;color:var(--text3)">${pillarNames[i]}</div>
-          <div style="font-size:20px;font-weight:700;color:${tc}">${t}</div>
-          <div style="font-size:20px;font-weight:700;color:${dc}">${d2}</div>
-        </div>`;
-      }).join('')}
-      <div style="text-align:center;padding:6px 10px;flex:1;max-width:72px;display:flex;flex-direction:column;align-items:center;justify-content:center">
-        <div style="font-size:9px;color:var(--text3)">${type}</div>
-        <div style="font-size:20px;font-weight:700;color:${wxColor(tgWx)}">${tg}</div>
-        <div style="font-size:20px;font-weight:700;color:${wxColor(dzWx)}">${dz}</div>
-      </div>
-    </div>
-    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:8px">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">天干关系</div>
-      <div style="font-size:13px;color:var(--text2);line-height:2.2">
-        ${tg}（${tgWx}·${dmSS}）${dmRel}<span style="color:${wxColor(dmWx)}">${dmTg}</span>日主<br>
-        ${tgParts.join('<br>')}
-      </div>
-    </div>
-    <div style="background:var(--bg2);border-radius:8px;padding:10px 12px">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">地支关系</div>
-      <div style="font-size:13px;color:var(--text2);line-height:2.2">
-        ${dzParts.length ? dzParts.join('<br>') : `${dz}与原局无冲合刑害`}
-      </div>
-    </div>
-  `;
+    <div style="display:flex;gap:4px;margin-bottom:14px;justify-content:center">${topPillars}</div>`;
   
-  document.getElementById('dayun-detail-body').innerHTML = html;
+  // 如果是流年且有大运，先显示大运关系
+  if (type === '流年' && dy) {
+    bodyHtml += buildRelHtml(dy.tg, dy.dz, dy.tgWx, dy.dzWx, '大运');
+  }
+  // 显示当前运（大运或流年）的关系
+  bodyHtml += buildRelHtml(tg, dz, tgWx, dzWx, type);
+  
+  document.getElementById('dayun-detail-body').innerHTML = bodyHtml;
   card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
