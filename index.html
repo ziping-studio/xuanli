@@ -4949,37 +4949,62 @@ function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji, dy) {
   // 生成某个干支与原局关系的HTML
   function buildRelHtml(rTg, rDz, rTgWx, rDzWx, rLabel) {
     const dmSS = getShishen(dmTg, rTg);
+    const dzCg = DZ_CANGGAN[rDz] || [];
+    const dzSS = getShishen(dmTg, dzCg[0] || rTg);
     const tgHeMap = {'甲':'己','乙':'庚','丙':'辛','丁':'壬','戊':'癸','己':'甲','庚':'乙','辛':'丙','壬':'丁','癸':'戊'};
     
-    const items = [];
-    items.push(`<span style="color:${wxColor(rTgWx)};font-weight:600">${rTg}</span>（${rTgWx}·${dmSS}）`);
-    
-    // 天干合（只列合，不列克/生）
-    if (tgHeMap[rTg] === dmTg) items.push(`<span style="color:#4ecdc4">${rTg}${dmTg}合</span>（合日主）`);
+    const tags = [];
+    // 天干合
+    if (tgHeMap[rTg] === dmTg) tags.push(`<span class="hcxh-tag he">${rTg}${dmTg}合（日主）</span>`);
     pillars.forEach((p, i) => {
       if (p === 'day') return;
-      if (tgHeMap[rTg] === bazi[p].tg) items.push(`<span style="color:#4ecdc4">${rTg}${bazi[p].tg}合</span>（${pillarNames[i]}）`);
+      if (tgHeMap[rTg] === bazi[p].tg) tags.push(`<span class="hcxh-tag he">${rTg}${bazi[p].tg}合（${pillarNames[i]}）</span>`);
     });
-    
-    // 地支合冲刑害
+    // 地支关系
     const liuhe = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']];
     const chong2 = [['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']];
     const xing2 = [['寅','巳','申'],['丑','戌','未'],['子','卯'],['辰','辰'],['午','午'],['酉','酉'],['亥','亥']];
     const hai2 = [['子','未'],['丑','午'],['寅','巳'],['卯','辰'],['申','亥'],['酉','戌']];
-    pillars.map(p => bazi[p].dz).forEach((odz, i) => {
-      const rels = [];
-      if (liuhe.some(p => (p[0]===rDz&&p[1]===odz)||(p[1]===rDz&&p[0]===odz))) rels.push(`<span style="color:#4ecdc4">六合</span>`);
-      if (chong2.some(p => (p[0]===rDz&&p[1]===odz)||(p[1]===rDz&&p[0]===odz))) rels.push(`<span style="color:#f44">相冲</span>`);
-      if (xing2.some(g => g.includes(rDz) && g.includes(odz) && rDz !== odz)) rels.push(`<span style="color:#ff9800">相刑</span>`);
-      if (hai2.some(p => (p[0]===rDz&&p[1]===odz)||(p[1]===rDz&&p[0]===odz))) rels.push(`<span style="color:#ce93d8">相害</span>`);
-      if (rels.length) items.push(`${rDz}${odz} ${rels.join(' ')}（${pillarNames[i]}）`);
+    const sanhe = [{dz:['申','子','辰'],wx:'水'},{dz:['亥','卯','未'],wx:'木'},{dz:['寅','午','戌'],wx:'火'},{dz:['巳','酉','丑'],wx:'金'}];
+    const allDz = pillars.map(p => bazi[p].dz);
+    allDz.forEach((odz, i) => {
+      if (liuhe.some(p => (p[0]===rDz&&p[1]===odz)||(p[1]===rDz&&p[0]===odz)))
+        tags.push(`<span class="hcxh-tag he">${rDz}${odz}六合（${pillarNames[i]}）</span>`);
+      if (chong2.some(p => (p[0]===rDz&&p[1]===odz)||(p[1]===rDz&&p[0]===odz)))
+        tags.push(`<span class="hcxh-tag chong">${rDz}${odz}相冲（${pillarNames[i]}）</span>`);
+      if (xing2.some(g => g.includes(rDz) && g.includes(odz) && (rDz !== odz || g[0] === g[1])))
+        tags.push(`<span class="hcxh-tag xing">${rDz}${odz}相刑（${pillarNames[i]}）</span>`);
+      if (hai2.some(p => (p[0]===rDz&&p[1]===odz)||(p[1]===rDz&&p[0]===odz)))
+        tags.push(`<span class="hcxh-tag hai">${rDz}${odz}相害（${pillarNames[i]}）</span>`);
+    });
+    sanhe.forEach(sh => {
+      if (!sh.dz.includes(rDz)) return;
+      const others = sh.dz.filter(d => d !== rDz);
+      const found = others.filter(d => allDz.includes(d));
+      if (found.length === 2) {
+        tags.push(`<span class="hcxh-tag sanhe">${rDz}${found[0]}${found[1]}三合${sh.wx}局</span>`);
+      } else if (found.length === 1) {
+        const center = sh.dz[1];
+        const label = (rDz === center || found[0] === center) ? '半合' : '拱合';
+        tags.push(`<span class="hcxh-tag sanhe">${rDz}${found[0]}${label}${sh.wx}</span>`);
+      }
     });
     
-    if (items.length <= 1) items.push(`<span style="color:var(--text3)">与原局无合冲刑害</span>`);
-    
-    return `<div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:8px">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${rLabel} ${rTg}${rDz}</div>
-      <div style="font-size:13px;color:var(--text2);line-height:2">${items.join('<br>')}</div>
+    return `<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${rLabel} ${rTg}${rDz}</div>
+      <div style="display:flex;gap:20px;margin-bottom:${tags.length?'10':'0'}px">
+        <div style="text-align:center">
+          <div style="font-size:9px;color:var(--text3)">天干</div>
+          <div style="font-size:24px;font-weight:700;color:${wxColor(rTgWx)}">${rTg}</div>
+          <div style="font-size:11px;color:var(--text2)">${rTgWx}·${dmSS}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:9px;color:var(--text3)">地支</div>
+          <div style="font-size:24px;font-weight:700;color:${wxColor(rDzWx)}">${rDz}</div>
+          <div style="font-size:11px;color:var(--text2)">${rDzWx}·${dzSS}</div>
+        </div>
+      </div>
+      ${tags.length ? `<div class="hcxh-tags">${tags.join('')}</div>` : ''}
     </div>`;
   }
   
