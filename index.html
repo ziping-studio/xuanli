@@ -4692,11 +4692,10 @@ function loadSaved(idx) {
       const daySel = document.getElementById('pp-day');
       daySel.value = inp.day - 1;
       const hourSel = document.getElementById('pp-hour');
-      // 找到对应时辰
+      // hour保存的是HOURS[idx].val(0,2,4...22)，需要转回索引
       const h = inp.hour !== undefined ? inp.hour : 12;
-      for (let i = 0; i < hourSel.options.length; i++) {
-        if (parseInt(hourSel.options[i].value) === h) { hourSel.value = h; break; }
-      }
+      const hourIdx = HOURS.findIndex(hr => hr.val === h);
+      if (hourIdx >= 0) hourSel.value = hourIdx;
       doPaipan();
       showToast('已加载 ' + (prof.name || '命盘'));
     } else {
