@@ -110,12 +110,15 @@ body {
   gap: 8px;
   margin-bottom: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 .input-label {
   font-size: 12px;
   color: var(--text2);
-  min-width: 28px;
+  min-width: 32px;
+  width: 32px;
   letter-spacing: 1px;
+  flex-shrink: 0;
 }
 .input-text {
   flex: 1;
@@ -400,11 +403,38 @@ body {
 .tag-by  { background: rgba(255,119,85,0.2);  color: var(--fire); }
 
 /* ── Analysis Text ── */
+.analysis-section {
+  cursor: pointer;
+  border-bottom: 1px solid rgba(201,168,76,0.08);
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+.analysis-section:last-of-type { border-bottom: none; }
 .analysis-label {
   font-size: 11px;
   color: var(--gold);
   letter-spacing: 1px;
   margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.analysis-arrow {
+  font-size: 10px;
+  color: var(--text3);
+  transition: transform 0.2s;
+}
+.analysis-section.collapsed .analysis-arrow { transform: rotate(-90deg); }
+.analysis-body {
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+  max-height: 800px;
+  opacity: 1;
+}
+.analysis-section.collapsed .analysis-body {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
 }
 .analysis-text {
   font-size: 13px;
@@ -730,21 +760,13 @@ body {
           <button class="btn-toggle"        id="btn-lunar" onclick="setCalType('lunar')">农历</button>
         </div>
       </div>
-      <div id="leap-group" style="display:none">
-        <div class="input-row">
-          <span class="input-label">闰月</span>
-          <div class="btn-group" style="flex:1">
-            <button class="btn-toggle active" id="btn-no-leap"  onclick="setLeap(false)">否</button>
-            <button class="btn-toggle"        id="btn-yes-leap" onclick="setLeap(true)">是</button>
-          </div>
-        </div>
-      </div>
       <div class="input-row" style="margin-top:10px">
         <span class="input-label">年份</span>
-        <input id="pp-year" class="input-text year-input" type="number" placeholder="年" min="1900" max="2100" value="1990">
+        <input id="pp-year" class="input-text year-input" type="number" placeholder="年" min="1900" max="2100" value="1990" onchange="if(currentCalType==='lunar'){buildMonthSelect('pp-month','lunar','pp-year')}">
         <select id="pp-month" class="input-select"></select>
         <select id="pp-day"   class="input-select"></select>
       </div>
+      <div id="leap-group" style="display:none"></div>
       <div class="input-row">
         <span class="input-label">时辰</span>
         <select id="pp-hour" class="input-select"></select>
@@ -771,18 +793,30 @@ body {
       </div>
       <div class="card">
         <div class="card-title">命局分析</div>
-        <div class="analysis-label">性格特质</div>
-        <div class="analysis-text" id="res-char"></div>
-        <div class="analysis-label">命局综评</div>
-        <div class="analysis-text" id="res-overview"></div>
-        <div class="analysis-label">事业财运</div>
-        <div class="analysis-text" id="res-career"></div>
-        <div class="analysis-label">感情姻缘</div>
-        <div class="analysis-text" id="res-love"></div>
-        <div class="analysis-label">幸运参考</div>
-        <div class="analysis-text" id="res-lucky"></div>
-        <div class="analysis-label">健康注意</div>
-        <div class="analysis-text" id="res-health"></div>
+        <div class="analysis-section" onclick="toggleAnalysis(this)">
+          <div class="analysis-label">性格特质 <span class="analysis-arrow">▾</span></div>
+          <div class="analysis-text analysis-body" id="res-char"></div>
+        </div>
+        <div class="analysis-section" onclick="toggleAnalysis(this)">
+          <div class="analysis-label">命局综评 <span class="analysis-arrow">▾</span></div>
+          <div class="analysis-text analysis-body" id="res-overview"></div>
+        </div>
+        <div class="analysis-section" onclick="toggleAnalysis(this)">
+          <div class="analysis-label">事业财运 <span class="analysis-arrow">▾</span></div>
+          <div class="analysis-text analysis-body" id="res-career"></div>
+        </div>
+        <div class="analysis-section" onclick="toggleAnalysis(this)">
+          <div class="analysis-label">感情姻缘 <span class="analysis-arrow">▾</span></div>
+          <div class="analysis-text analysis-body" id="res-love"></div>
+        </div>
+        <div class="analysis-section" onclick="toggleAnalysis(this)">
+          <div class="analysis-label">幸运参考 <span class="analysis-arrow">▾</span></div>
+          <div class="analysis-text analysis-body" id="res-lucky"></div>
+        </div>
+        <div class="analysis-section" onclick="toggleAnalysis(this)">
+          <div class="analysis-label">健康注意 <span class="analysis-arrow">▾</span></div>
+          <div class="analysis-text analysis-body" id="res-health"></div>
+        </div>
       </div>
       <button class="btn-save" onclick="saveBazi()">✦ 保存此命盘</button>
       <button class="btn-save" onclick="shareBazi()" style="background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.08));color:var(--gold2);border-color:var(--gold)">✦ 分享命盘卡片</button>
@@ -3538,9 +3572,10 @@ function initSelects() {
   buildHourSelect('hp-f-hour');
 }
 
-function buildMonthSelect(id, calType) {
+function buildMonthSelect(id, calType, yearId) {
   const sel = document.getElementById(id);
   if (!sel) return;
+  const cur = sel.value;
   sel.innerHTML = '';
   if (calType === 'solar') {
     for (let i = 1; i <= 12; i++) {
@@ -3550,13 +3585,27 @@ function buildMonthSelect(id, calType) {
       sel.appendChild(opt);
     }
   } else {
+    // 获取年份判断闰月
+    const yId = yearId || id.replace('month','year').replace('-month','-year');
+    const yEl = document.getElementById(yId);
+    const y = yEl ? (parseInt(yEl.value) || 1990) : 1990;
+    const lm = leapMonth(y);
     LUNAR_MONTHS_SHORT.forEach((m, i) => {
       const opt = document.createElement('option');
       opt.value = i;
       opt.textContent = m;
       sel.appendChild(opt);
+      // 在闰月位置后插入闰月选项
+      if (lm > 0 && lm === i + 1) {
+        const leapOpt = document.createElement('option');
+        leapOpt.value = `leap_${i}`;
+        leapOpt.textContent = `闰${m}`;
+        sel.appendChild(leapOpt);
+      }
     });
   }
+  // 恢复之前选中的值
+  if (cur && sel.querySelector(`option[value="${cur}"]`)) sel.value = cur;
 }
 
 function buildDaySelect(id, calType, maxDay) {
@@ -3601,9 +3650,27 @@ function setCalType(type) {
   currentCalType = type;
   document.getElementById('btn-solar').classList.toggle('active', type === 'solar');
   document.getElementById('btn-lunar').classList.toggle('active', type === 'lunar');
-  document.getElementById('leap-group').style.display = type === 'lunar' ? 'block' : 'none';
-  buildMonthSelect('pp-month', type);
+  buildMonthSelect('pp-month', type, 'pp-year');
   buildDaySelect('pp-day', type, 30);
+}
+
+function updateLeapHint() {
+  const y = parseInt(document.getElementById('pp-year').value) || 1990;
+  const m = parseInt(document.getElementById('pp-month').value) || 1;
+  const lm = leapMonth(y);
+  const leapGroup = document.getElementById('leap-group');
+  const yesBtn = document.getElementById('btn-yes-leap');
+  const noBtn = document.getElementById('btn-no-leap');
+  if (lm > 0 && lm === m) {
+    // 选了闰月对应的月份，显示闰月选项
+    leapGroup.style.display = 'block';
+    noBtn.textContent = `${lm}月`;
+    yesBtn.textContent = `闰${lm}月`;
+  } else {
+    // 没有闰月或月份不匹配，隐藏
+    leapGroup.style.display = 'none';
+    if (currentLeap) setLeap(false);
+  }
 }
 
 let currentGender = '男';
@@ -3642,7 +3709,9 @@ function doPaipan() {
   if (!year || year < 1900 || year > 2100) {
     alert('请输入有效年份（1900-2100）'); return;
   }
-  const monthIdx = parseInt(document.getElementById('pp-month').value);
+  const monthVal = document.getElementById('pp-month').value;
+  const isLeapMonth = String(monthVal).startsWith('leap_');
+  const monthIdx = isLeapMonth ? parseInt(monthVal.replace('leap_','')) : parseInt(monthVal);
   const dayIdx = parseInt(document.getElementById('pp-day').value);
   const hourIdx = parseInt(document.getElementById('pp-hour').value);
   const name = document.getElementById('pp-name').value.trim();
@@ -3652,9 +3721,9 @@ function doPaipan() {
   if (currentCalType === 'lunar') {
     const lm = monthIdx + 1, ld = dayIdx + 1;
     try {
-      const sol = lunar2Solar(year, lm, ld, currentLeap);
+      const sol = lunar2Solar(year, lm, ld, isLeapMonth);
       solarYear = sol.year; solarMonth = sol.month; solarDay = sol.day;
-      lunarStr = `${year}年${currentLeap?'闰':''}${LUNAR_MONTHS_SHORT[lm-1]}${LUNAR_DAYS[ld-1]}`;
+      lunarStr = `${year}年${isLeapMonth?'闰':''}${LUNAR_MONTHS_SHORT[lm-1]}${LUNAR_DAYS[ld-1]}`;
       solarStr = `${solarYear}年${solarMonth}月${solarDay}日`;
     } catch(e) { alert('农历日期无效'); return; }
   } else {
@@ -4160,13 +4229,68 @@ function doPaipan() {
   // 缺失五行对应脏腑薄弱
   const lackWx = Object.entries(wxCount_local).filter(([,v])=>v===0).map(([k])=>k);
   const lackHealthTip = lackWx.map(w=>`${w}气偏缺，${wxHealth[w]}相对薄弱，宜日常调补`).join('；');
+  // 过旺五行（>35%）健康风险
+  const excessWx = Object.entries(wxCount_local).filter(([w,v])=>v/wxTotalH>=0.35).map(([k])=>k);
+  const excessWxHealth = {
+    '木': '木气过旺，肝火易升，注意情绪暴躁、头痛、眼疾',
+    '火': '火气过旺，心火上炎，注意失眠多梦、口腔溃疡、血压偏高',
+    '土': '土气过旺，脾胃负担重，注意肥胖、痰湿、四肢沉重',
+    '金': '金气过旺，肃降太过，注意皮肤干燥、呼吸道过敏、便秘',
+    '水': '水气过旺，寒湿偏重，注意腰膝酸冷、水肿、畏寒',
+  };
+  const excessHealthTip = excessWx.map(w => excessWxHealth[w]).filter(Boolean).join('；');
+  // 养生运动建议
+  const wxExercise = {
+    '木': '适合散步、太极、瑜伽等舒展类运动，疏通肝气',
+    '火': '适合游泳、静坐冥想，降心火养心血',
+    '土': '适合跑步、登山等消耗类运动，健脾化湿',
+    '金': '适合深呼吸、有氧运动，强健肺功能',
+    '水': '适合艾灸、温泉、慢跑等温阳活动，补肾暖身',
+  };
+  const weakWxForExercise = lackWx.length ? lackWx[0] : (jiOverWx.length ? WX_KE[jiOverWx[0]] : dmWx);
+  const exerciseTip = wxExercise[weakWxForExercise] || '';
+
+  // 五行相克链健康提示（忌神克日主的连锁效应）
+  const keChainMap = {
+    '木克土': '木旺克土，肝气犯脾胃，容易消化不良或食欲不振',
+    '土克水': '土旺克水，脾湿困肾，容易水肿或腰膝酸软',
+    '水克火': '水旺克火，寒水伤心，容易心悸或血液循环不畅',
+    '火克金': '火旺克金，心火灼肺，容易咳嗽或呼吸道问题',
+    '金克木': '金旺克木，肺气太强压肝，容易筋骨僵硬或情绪抑郁',
+  };
+  const keChainTip = jiOverWx.map(w => {
+    const keTarget = WX_SHENG[w] ? '' : ''; // 忌神克的五行
+    const key = `${w}克${WX_KE[w]}`;
+    return keChainMap[key] || '';
+  }).filter(Boolean).slice(0,1).join('');
+
+  // 季节饮食养生
+  const seasonDiet = {
+    '寅':'春季宜养肝，多食绿叶蔬菜、枸杞，少饮酒',
+    '卯':'春季宜疏肝理气，可饮菊花茶、玫瑰花茶',
+    '辰':'春末宜健脾祛湿，可食薏米、山药、红豆',
+    '巳':'初夏宜清心降火，多食苦瓜、莲子、绿豆',
+    '午':'盛夏宜养心安神，多食番茄、红枣，忌过于贪凉',
+    '未':'长夏宜健脾和胃，少食甜腻，可食扁豆、茯苓',
+    '申':'初秋宜润肺，多食梨、银耳、百合、蜂蜜',
+    '酉':'仲秋宜润燥，可食芝麻、核桃，多喝温水',
+    '戌':'深秋宜收敛阳气，适当进补但勿过燥',
+    '亥':'初冬宜补肾，可食黑豆、黑芝麻、羊肉',
+    '子':'隆冬宜温补，可食桂圆、生姜、红糖水',
+    '丑':'冬末宜祛寒湿，可食姜汤、羊肉、韭菜',
+  };
+  const dietTip = seasonDiet[raw.month.dz] || '';
 
   const healthParts = [
     `日主${dmWx}，${wxHealth[dmWx]}为先天关注重点，${wxHealthTip[dmWx]}`,
     monthHealthTip,
     dayDzHealthTip,
     jiHealthRisk ? `忌神${jiOverWx.join('、')}偏旺，易引发${jiHealthRisk}` : '',
+    keChainTip,
+    excessHealthTip,
     lackHealthTip,
+    exerciseTip,
+    dietTip,
   ].filter(Boolean);
   const health = healthParts.join('；') + '。';
 
@@ -4203,7 +4327,16 @@ function doPaipan() {
     '建禄格': `命局取建禄格，月令比劫当令。建禄代表自立自强，命主独立性极强，不依赖他人。${ratio>=50?'身旺比劫重，须防争夺消耗。':'身中比劫帮身，根基稳固。'}`,
     '月刃格': `命局取月刃格，月令羊刃当令。月刃代表刚毅果决，命主意志坚定竞争力强。${ratio>=50?'身旺刃锋利，须有官杀制刃方成大器。':'身中有刃帮身，行事有魄力。'}`,
   };
-  const gejvStr = gejvExplain[gejv] || (congge ? '' : `命局取${gejv}。`);
+  const gejvStr = gejvExplain[gejv] || (congge ? (({
+    '从儿格': '命局取从儿格，食伤极旺，日主顺势从之。才华横溢，创造力极强，宜从事艺术、技术、教育等创意行业。顺其泄秀之势，忌印比逆势帮身。',
+    '从财格': '命局取从财格，财星极旺，日主顺势从之。天生对金钱敏感，商业头脑出众，宜经商理财。顺其财势，忌印比逆势帮身。',
+    '从杀格': '命局取从杀格，官杀极旺，日主顺势从之。适合在体制内或高压环境中发展，服从权威反得重用。顺其杀势，忌食伤逆势制杀。',
+    '曲直格': '命局取曲直格（专旺），木气一片纯粹。性格仁厚正直，适合文教、法律、环保等行业。顺木之势，忌金克木。',
+    '炎上格': '命局取炎上格（专旺），火气一片炎明。性格热情奔放，适合传媒、演艺、科技等行业。顺火之势，忌水克火。',
+    '稼穑格': '命局取稼穑格（专旺），土气厚重纯粹。性格稳重诚信，适合地产、农业、金融等行业。顺土之势，忌木克土。',
+    '从革格': '命局取从革格（专旺），金气肃杀纯粹。性格果断刚毅，适合军警、法律、金属加工等行业。顺金之势，忌火克金。',
+    '润下格': '命局取润下格（专旺），水气充沛纯粹。性格智慧灵活，适合物流、传播、咨询等行业。顺水之势，忌土克水。',
+  })[gejv] || `命局取${gejv}。`) : `命局取${gejv}。`);
 
   // 格局纯杂度评估
   const guanShaCount = allTgSS.filter(s => s === '正官' || s === '七杀').length;
@@ -4412,13 +4545,17 @@ function renderPaipanResult(raw) {
 
   // 命局分析
   const el_res_char = document.getElementById('res-char'); if (el_res_char) el_res_char.textContent = an.character;
-  const el_res_overview = document.getElementById('res-overview'); if (el_res_overview) el_res_overview.textContent = an.overview || '';
+  const el_res_overview = document.getElementById('res-overview'); if (el_res_overview) el_res_overview.textContent = an.overview || `${an.dmWx || ''}日主，${an.gejv || ''}。${an.gejvDesc ? an.gejvDesc.substring(0,60) : ''}`;
   const el_res_career = document.getElementById('res-career'); if (el_res_career) el_res_career.textContent = an.career;
   const el_res_lucky = document.getElementById('res-lucky'); if (el_res_lucky) el_res_lucky.textContent = an.lucky;
   const el_res_love = document.getElementById('res-love'); if (el_res_love) el_res_love.textContent = an.love;
   const el_res_health = document.getElementById('res-health'); if (el_res_health) el_res_health.textContent = an.health;
 
   renderSavedList();
+}
+
+function toggleAnalysis(el) {
+  el.classList.toggle('collapsed');
 }
 
 // ===== 保存命盘 =====
@@ -4989,6 +5126,35 @@ function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji, dy) {
         tags.push(`<span class="hcxh-tag sanhe">${rDz}${found[0]}${label}${sh.wx}</span>`);
       }
     });
+    // 三会局：寅卯辰(木)、巳午未(火)、申酉戌(金)、亥子丑(水)
+    const sanhui = [{dz:['寅','卯','辰'],wx:'木'},{dz:['巳','午','未'],wx:'火'},{dz:['申','酉','戌'],wx:'金'},{dz:['亥','子','丑'],wx:'水'}];
+    sanhui.forEach(sh => {
+      if (!sh.dz.includes(rDz)) return;
+      const others = sh.dz.filter(d => d !== rDz);
+      const found = others.filter(d => allDz.includes(d));
+      if (found.length === 2) {
+        tags.push(`<span class="hcxh-tag sanhe">${sh.dz.join('')}三会${sh.wx}局</span>`);
+      }
+    });
+    
+    // 文字解读
+    const ssInterpMap = {
+      '正官': '代表事业、名誉、管束之力',
+      '七杀': '代表压力、竞争、外部挑战',
+      '正印': '代表贵人、学识、保护力量',
+      '偏印': '代表独创思维、玄学、暗中助力',
+      '正财': '代表稳定收入、务实机遇',
+      '偏财': '代表意外之财、投资机会',
+      '食神': '代表才华展现、口福享受',
+      '伤官': '代表创造力爆发、表达欲望',
+      '比肩': '代表同辈助力、竞争并存',
+      '劫财': '代表争夺、合作中的摩擦',
+    };
+    const ssDesc = ssInterpMap[dmSS] || '';
+    const isXi = xi.includes(rTgWx);
+    const isJi = ji.includes(rTgWx);
+    const xijiWord = isXi ? '喜神临运，有利' : (isJi ? '忌神临运，需谨慎' : '闲神临运，影响平淡');
+    const interpText = ssDesc ? `${dmSS}运，${ssDesc}。${xijiWord}。` : `${xijiWord}。`;
     
     return `<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:8px">
       <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${rLabel} ${rTg}${rDz}</div>
@@ -5004,7 +5170,8 @@ function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji, dy) {
           <div style="font-size:11px;color:var(--text2)">${rDzWx}·${dzSS}</div>
         </div>
       </div>
-      ${tags.length ? `<div class="hcxh-tags">${tags.join('')}</div>` : ''}
+      ${tags.length ? `<div class="hcxh-tags" style="margin-bottom:8px">${tags.join('')}</div>` : ''}
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;padding-top:6px;border-top:1px solid var(--border)">${interpText}</div>
     </div>`;
   }
   
@@ -5044,8 +5211,112 @@ function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji, dy) {
   // 显示当前运（大运或流年）的关系
   bodyHtml += buildRelHtml(tg, dz, tgWx, dzWx, type);
   
+  // === 流年模式：大运与流年之间的关系 + 三方联动 ===
+  if (type === '流年' && dy) {
+    const dyDz = dy.dz, lyDz = dz, dyTg = dy.tg, lyTg = tg;
+    const crossTags = [];
+    
+    // 大运天干 vs 流年天干
+    const tgHeMap = {'甲':'己','乙':'庚','丙':'辛','丁':'壬','戊':'癸','己':'甲','庚':'乙','辛':'丙','壬':'丁','癸':'戊'};
+    if (tgHeMap[dyTg] === lyTg) crossTags.push(`<span class="hcxh-tag he">${dyTg}${lyTg}合（大运天干合流年天干）</span>`);
+    
+    // 大运地支 vs 流年地支
+    const liuhe = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']];
+    const chong3 = [['子','午'],['丑','未'],['寅','申'],['卯','酉'],['辰','戌'],['巳','亥']];
+    const xing3 = [['寅','巳','申'],['丑','戌','未'],['子','卯'],['辰','辰'],['午','午'],['酉','酉'],['亥','亥']];
+    if (liuhe.some(p => (p[0]===dyDz&&p[1]===lyDz)||(p[1]===dyDz&&p[0]===lyDz)))
+      crossTags.push(`<span class="hcxh-tag he">${dyDz}${lyDz}六合（大运地支合流年地支）</span>`);
+    if (chong3.some(p => (p[0]===dyDz&&p[1]===lyDz)||(p[1]===dyDz&&p[0]===lyDz)))
+      crossTags.push(`<span class="hcxh-tag chong">${dyDz}${lyDz}相冲（大运地支冲流年地支）</span>`);
+    if (xing3.some(g => g.includes(dyDz) && g.includes(lyDz) && (dyDz !== lyDz || g[0] === g[1])))
+      crossTags.push(`<span class="hcxh-tag xing">${dyDz}${lyDz}相刑（大运地支刑流年地支）</span>`);
+    
+    // 三方联动：原局地支 + 大运地支 + 流年地支 凑三合/三刑
+    const allDzSet = [...pillars.map(p => bazi[p].dz), dyDz, lyDz];
+    const sanhe = [{dz:['申','子','辰'],wx:'水'},{dz:['亥','卯','未'],wx:'木'},{dz:['寅','午','戌'],wx:'火'},{dz:['巳','酉','丑'],wx:'金'}];
+    const sanxing = [['寅','巳','申'],['丑','戌','未']];
+    
+    // 三合联动：需要大运和流年各提供至少一个，且原局提供至少一个
+    const origDz = pillars.map(p => bazi[p].dz);
+    sanhe.forEach(sh => {
+      const inOrig = sh.dz.filter(d => origDz.includes(d));
+      const dyIn = sh.dz.includes(dyDz);
+      const lyIn = sh.dz.includes(lyDz);
+      // 三方各出一个凑齐三合
+      if (inOrig.length >= 1 && dyIn && lyIn && !sh.dz.every(d => origDz.includes(d))) {
+        // 确认是三方合力（不是原局自己就凑齐的）
+        const allThree = new Set([...inOrig.filter(d => sh.dz.includes(d)), dyDz, lyDz].filter(d => sh.dz.includes(d)));
+        if (allThree.size === 3) {
+          crossTags.push(`<span class="hcxh-tag sanhe">${[...allThree].join('')}三合${sh.wx}局（本盘+大运+流年联动）</span>`);
+        }
+      }
+    });
+    
+    // 三刑联动：寅巳申、丑戌未
+    sanxing.forEach(g => {
+      const inOrig = g.filter(d => origDz.includes(d));
+      const dyIn = g.includes(dyDz);
+      const lyIn = g.includes(lyDz);
+      if (inOrig.length >= 1 && dyIn && lyIn) {
+        const allThree = new Set([...inOrig.filter(d => g.includes(d)), dyDz, lyDz].filter(d => g.includes(d)));
+        if (allThree.size === 3) {
+          crossTags.push(`<span class="hcxh-tag xing">${[...allThree].join('')}三刑（本盘+大运+流年联动）</span>`);
+        }
+      }
+    });
+    
+    // 三会联动
+    const sanhui = [{dz:['寅','卯','辰'],wx:'木'},{dz:['巳','午','未'],wx:'火'},{dz:['申','酉','戌'],wx:'金'},{dz:['亥','子','丑'],wx:'水'}];
+    sanhui.forEach(sh => {
+      const inOrig = sh.dz.filter(d => origDz.includes(d));
+      const dyIn = sh.dz.includes(dyDz);
+      const lyIn = sh.dz.includes(lyDz);
+      if (inOrig.length >= 1 && dyIn && lyIn) {
+        const allThree = new Set([...inOrig.filter(d => sh.dz.includes(d)), dyDz, lyDz].filter(d => sh.dz.includes(d)));
+        if (allThree.size === 3 && !sh.dz.every(d => origDz.includes(d))) {
+          crossTags.push(`<span class="hcxh-tag sanhe">${sh.dz.join('')}三会${sh.wx}局（本盘+大运+流年联动）</span>`);
+        }
+      }
+    });
+    
+    if (crossTags.length) {
+      bodyHtml += `<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:8px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">大运与流年关系</div>
+        <div class="hcxh-tags">${crossTags.join('')}</div>
+      </div>`;
+    }
+  }
+  
+  // 文字解读
+  const dmSS = getShishen(dmTg, tg);
+  const dzCg = DZ_CANGGAN[dz] || [];
+  const dzSS2 = getShishen(dmTg, dzCg[0] || tg);
+  const ssDesc = {
+    '比肩':'同辈助力，竞争并存，利合作但防争夺',
+    '劫财':'朋友多开支大，防破财合伙纠纷',
+    '食神':'才华表达顺畅，利考试创作，口福佳',
+    '伤官':'思维活跃但易生是非，利技术创新，防口舌',
+    '正财':'利稳定求财，收入增加，利婚姻（男命）',
+    '偏财':'利投资社交，意外之财，但来去快',
+    '正官':'利升职考试，贵人相助，但压力增大',
+    '七杀':'压力竞争加剧，利开拓但须防小人官非',
+    '正印':'利学习考证，贵人扶持，身体转好',
+    '偏印':'利研究专业技能，但防思虑过度',
+  };
+  const tgText = ssDesc[dmSS] || '';
+  const dzText = ssDesc[dzSS2] || '';
+  if (tgText || dzText) {
+    const lines = [];
+    if (tgText) lines.push(`天干${dmSS}：${tgText}`);
+    if (dzText && dzSS2 !== dmSS) lines.push(`地支${dzSS2}：${dzText}`);
+    bodyHtml += `<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">运势提示</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8">${lines.join('<br>')}</div>
+    </div>`;
+  }
+  
   document.getElementById('dayun-detail-body').innerHTML = bodyHtml;
-  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function getTgRelation(wx1, wx2) {
@@ -5469,7 +5740,7 @@ function shareBazi() {
 }
 
 function renderBaziCard(raw, an, qrImg) {
-  const W = 750, H = 1090;
+  const W = 750, H = 1110;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -5538,14 +5809,22 @@ function renderBaziCard(raw, an, qrImg) {
     ctx.fillText(raw[p].dz, startX + i * gap + gap/2, 300);
   });
 
+  // 星运（十二长生）
+  ctx.font = '12px "PingFang SC",sans-serif';
+  ctx.fillStyle = '#6b6050';
+  pillars.forEach((p, i) => {
+    const cs = getChangSheng(raw.day.tg, raw[p].dz);
+    ctx.fillText(cs, startX + i * gap + gap/2, 328);
+  });
+
   // 分隔线
   ctx.strokeStyle = 'rgba(201,168,76,0.2)';
-  ctx.beginPath(); ctx.moveTo(60, 325); ctx.lineTo(W-60, 325); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(60, 345); ctx.lineTo(W-60, 345); ctx.stroke();
 
   // 格局信息
   ctx.textAlign = 'left';
   ctx.font = '15px "PingFang SC",sans-serif';
-  let infoY = 365;
+  let infoY = 385;
 
   const drawInfoRow = (label, value, color) => {
     ctx.fillStyle = '#6b6050';
