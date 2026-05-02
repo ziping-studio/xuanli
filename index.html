@@ -884,6 +884,11 @@ body {
       请先在「排盘」页输入生辰
     </div>
     <div id="dayun-content" style="display:none">
+      <div class="card" id="dayun-profile" style="text-align:center;padding:12px">
+        <span style="font-size:15px;color:var(--text1);letter-spacing:2px" id="dy-name"></span>
+        <span style="font-size:12px;color:var(--text3);margin-left:8px" id="dy-qr"></span>
+        <span style="font-size:12px;color:var(--gold);margin-left:8px" id="dy-gejv"></span>
+      </div>
       <div class="card">
         <div class="card-title">大运排列</div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:12px" id="dayun-info"></div>
@@ -2519,15 +2524,15 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
   const gejvAdjust = {
     // 正官格：印护官核心。身旺时旺衰把印列忌，格局要求印护官
     '正官格': {
-      旺: { force_xi: [yinShu], move_xi_to_zhong: [shiShen, caiXing], add_zhong: [guanSha], note: '正官格身旺，印护官为首要，官/食伤/财降为中性' },
+      旺: { force_xi: [yinShu], move_xi_to_zhong: [shiShen, caiXing], add_zhong: [guanSha], note: '正官格身旺，印护官为首要，食伤财暂不为主用' },
       弱: { note: '正官格身弱，扶身为先，印比为用，官星有印化方可留' },
-      中: { add_xi: [yinShu], force_ji: [guanSha, shiShen], add_zhong: [caiXing], note: '正官格身中，印扶身为主，官杀/食伤降忌，财归闲' },
+      中: { add_xi: [yinShu], force_ji: [guanSha, shiShen], add_zhong: [caiXing], note: '正官格身中，印扶身为主，官杀食伤为忌' },
     },
     // 七杀格
     '七杀格': {
-      旺: { force_ji: [guanSha], add_xi: [shiShen], move_ji_to_zhong: [biJie], note: '七杀格身旺，食伤制杀为用，官杀降忌，比劫中性' },
+      旺: { force_ji: [guanSha], add_xi: [shiShen], move_ji_to_zhong: [biJie], note: '七杀格身旺，食伤制杀为用，官杀降忌，比劫影响不大' },
       弱: { force_ji: [guanSha], add_xi: [yinShu], note: '七杀格身弱，印绶化杀护身为要，官杀降忌' },
-      中: { force_ji: [guanSha], add_xi: [yinShu, shiShen], add_zhong: [caiXing], note: '七杀格身中，食伤制杀+印化杀，官杀降忌，财归闲' },
+      中: { force_ji: [guanSha], add_xi: [yinShu, shiShen], add_zhong: [caiXing], note: '七杀格身中，食伤制杀+印化杀，官杀为忌' },
     },
     // 正印格：最忌财破印。身旺/中时官生印为用，财强制移入忌
     // 特殊：杀印相生格（官杀本气+印透干）→ 喜印（化杀），忌财（破印）忌官杀（以有印化为前提）
@@ -2545,10 +2550,10 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
           force_ji: [caiXing],
           ...((['亥','子'].includes(monthDz)) ? {add_ji:[yinShu]} : {}),
           move_ji_to_zhong: [yinShu],
-          note: '正印格身旺，官杀生印为用，最忌财星破印，印绶降为中性（寒月印旺则忌）'
+          note: '正印格身旺，官杀生印为用，最忌财星破印，印不宜再加'
         },
         弱: { force_ji: [caiXing], note: '正印格身弱，印比扶身，最忌财星破印坏局' },
-        中: { force_xi: [guanSha], force_ji: [caiXing], note: '正印格身中，官生印为用（官从忌提升），忌财破' },
+        中: { force_xi: [guanSha], force_ji: [caiXing], note: '正印格身中，官生印为用（官星可用），忌财破' },
       };
     })(),
     // 偏印格：身旺喜财制枭；身弱/中忌财破印
@@ -2557,39 +2562,35 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
       旺: {
         add_xi: [caiXing],
         ...(((wxCount[shiShen]||0)/Object.values(wxCount).reduce((a,b)=>a+b,1) > 0.30) ? {force_ji:[shiShen]} : {}),
-        note: '偏印格身旺，财星制枭为用，忌印比；食伤极旺时亦忌'
+        note: '偏印格身旺，财星制枭为用，忌印比'
       },
       弱: { force_ji: [caiXing], note: '偏印格身弱，比劫扶身为要，忌财破印' },
-      中: { force_ji: [caiXing, guanSha], note: '偏印格身中，忌财破印，忌官杀克身；食伤身中可担，归闲' },
+      中: { force_ji: [caiXing, guanSha], note: '偏印格身中，忌财破印，忌官杀克身；食伤影响不大' },
     },
     // 正财格：官护财，忌比劫。身旺时印比本来在忌里是对的，无需force
     '正财格': {
-      旺: { add_zhong: [yinShu, biJie], note: '正财格身旺，官护财为主，印比降为中性（偶有官护时可扶）' },
+      旺: { add_zhong: [yinShu, biJie], note: '正财格身旺，官护财为主，印比暂不为用' },
       弱: { note: '正财格身弱，印比扶身为先，财星不可妄用' },
-      中: { force_xi: [guanSha], add_zhong: [shiShen], note: '正财格身中，官护财（官从忌提升），食伤生财为辅' },
+      中: { force_xi: [guanSha], add_zhong: [shiShen], note: '正财格身中，官护财（官星可用），食伤生财为辅' },
     },
     // 偏财格：忌比劫，身旺印比降中性
     '偏财格': {
-      旺: { add_zhong: [yinShu, biJie], note: '偏财格身旺，食伤生财、官护财为用，印比降为中性' },
+      旺: { add_zhong: [yinShu, biJie], note: '偏财格身旺，食伤生财、官护财为用，印比暂不为用' },
       弱: { note: '偏财格身弱，印比扶身' },
-      中: { add_xi: [shiShen], note: '偏财格身中，食生财，印比保留' },
+      中: { add_xi: [shiShen], note: '偏财格身中，食生财，印比可用' },
     },
-    // 食神格：身旺喜财忌印（枭夺食）；食伤极旺时走配印模式
+    // 食神格：身旺喜财忌印（枭夺食），食神是格神，印是天敌
     '食神格': (() => {
-      const shiShenPct = (wxCount[shiShen]||0) / (Object.values(wxCount).reduce((a,b)=>a+b,0)||1);
-      const peiYin = shiShenPct >= 0.40; // 食伤极旺（>40%）→ 配印模式
       // 月令本气是印星（枭神当令）→ 身中也忌印（枭夺食）
       const mCgSS = getShishen(bazi.day.tg, (DZ_CG_SCORE[monthDz]||[])[0]?.tg||'');
       const yuelingIsYin = isSameCat(mCgSS, '正印');
       return {
-        旺: peiYin
-          ? { force_xi: [yinShu, biJie], force_ji: [guanSha, caiXing, shiShen], note: '食神格身旺食伤极旺，配印为用，忌官忌财忌食伤' }
-          : { add_xi: [caiXing], force_ji: [yinShu], note: '食神格身旺，食神生财为用，最忌枭印夺食' },
+        旺: { add_xi: [caiXing], force_ji: [yinShu], note: '食神格身旺，食神生财为用，最忌枭印夺食' },
         弱: { add_ji: [guanSha], note: '食神格身弱，印比护食，忌官杀克制' },
         中: {
           add_xi: [caiXing], add_zhong: [shiShen],
           ...(yuelingIsYin ? {force_ji: [yinShu, shiShen]} : {}),
-          note: yuelingIsYin ? '食神格身中（月令印当令），枭神夺食，忌印忌食伤' : '食神格身中，财星接食为用，食神中性'
+          note: yuelingIsYin ? '食神格身中（月令印当令），枭神夺食，忌印忌食伤' : '食神格身中，财星接食为用，食神影响不大'
         },
       };
     })(),
@@ -2604,7 +2605,7 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
           ? { force_xi: [yinShu, biJie], force_ji: [guanSha, caiXing, shiShen], note: '伤官格身旺食伤极旺，伤官配印为用，印比升喜，忌官忌财忌伤' }
           : { add_xi: [caiXing], force_ji: [guanSha], note: '伤官格身旺，伤官生财为用，最忌见官' },
         弱: { add_xi: [yinShu], force_ji: [guanSha], note: '伤官格身弱，印绶配伤官，忌官杀克身' },
-        中: { add_xi: [caiXing], force_ji: [guanSha, ...(shiShenPct>=0.25?[shiShen]:[])], add_zhong: [yinShu], note: '伤官格身中，配财为先，忌官；印归闲；食伤极旺时亦忌' },
+        中: { add_xi: [caiXing], force_ji: [guanSha, ...(shiShenPct>=0.25?[shiShen]:[])], add_zhong: [yinShu], note: '伤官格身中，配财为先，忌官' },
       };
     })(),
     // 建禄格/月刃格：月令比劫当令，天然身旺
@@ -2752,14 +2753,14 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
         if (!xiBase.includes('金')) xiBase.push('金');
         reasons.push(`【调候】秋冬丁火，庚金劈甲引丁，金从忌升为喜`);
       }
-      // 木多火塞：木>=3个天干时降为慎
+      // 木多火塞：木>=3个天干时降为忌
       if (yinTgCount >= 3) {
         const muIdx = xiBase.indexOf('木');
-        if (muIdx >= 0) {
-          xiBase.splice(muIdx, 1);
-          if (!zhongBase.includes('木')) zhongBase.push('木');
-          reasons.push(`【调候】印星(木)过多，木多火塞，木降为慎`);
-        }
+        if (muIdx >= 0) xiBase.splice(muIdx, 1);
+        const muZhIdx = zhongBase.indexOf('木');
+        if (muZhIdx >= 0) zhongBase.splice(muZhIdx, 1);
+        if (!jiBase.includes('木')) jiBase.push('木');
+        reasons.push(`【调候】印星(木)过多，木多火塞，木降为忌`);
       }
     }
   }
@@ -3069,24 +3070,19 @@ function calcGejv(bazi) {
         if (!changed) { finalSS = benQiSS; touGanMark = ''; }
       }
     } else if (['正官','七杀'].includes(benQiSS)) {
-      // 官杀格：检查月令藏干里有无印星，且该印的同类透出天干（杀印相生）
-      // 例：亥月藏甲（偏印），乙木透干（甲之同类）→ 以印格为主
-      let yinFromCg = null;
+      // 官杀月令：《子平真诠》"透杀而印透，以杀为格，以印化杀"
+      // 即使印星透干也维持官杀格，印是化杀的用神不改格
+      finalSS = benQiSS;
+      // 检查是否有印星透干（杀印相生标记，用于格局调整）
+      let hasYinTou = false;
       for (let i = 1; i < cgList.length; i++) {
         const cgSS = getShishen(dm, cgList[i].tg);
         if (['正印','偏印'].includes(cgSS)) {
-          // 该印的同类有无透干
           const yinTouGan = allTg.find(tg => isSameCat(getShishen(dm, tg), cgSS));
-          if (yinTouGan) { yinFromCg = getShishen(dm, yinTouGan); break; }
+          if (yinTouGan) { hasYinTou = true; break; }
         }
       }
-      if (yinFromCg) {
-        finalSS = yinFromCg;
-        touGanMark = '（杀印相生）';
-      } else {
-        finalSS = benQiSS;
-        touGanMark = '';
-      }
+      touGanMark = hasYinTou ? '（杀印相生）' : '';
     } else {
       // 本气无透：按中余气藏干精确匹配检查，有透出则变格，否则取本气
       let changed = false;
@@ -4992,10 +4988,10 @@ function renderWuxing() {
       </div>`;
   }
 
-  const reasonsHtml = reasons.map(seg => {
+  const reasonsHtml = reasons.filter(seg => seg.match(/^【.+?】/)).map(seg => {
     const m = seg.match(/^【(.+?)】(.+)$/);
     if (m) return `<div class="reason-item"><span class="reason-label ${tagMap[m[1]]||'tag-qr'}">【${m[1]}】</span>${m[2]}</div>`;
-    return `<div class="reason-item">${seg}</div>`;
+    return '';
   }).join('');
 
   document.getElementById('wx-reasons').innerHTML = gejvBlock + reasonsHtml;
