@@ -2753,23 +2753,14 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
         if (!xiBase.includes('金')) xiBase.push('金');
         reasons.push(`【调候】秋冬丁火，庚金劈甲引丁，金从忌升为喜`);
       }
-      // 木多火塞：木>=3个天干时降为忌
+      // 木多火塞：木>=3个天干时降为忌（病药：木过旺为病）
       if (yinTgCount >= 3) {
         const muIdx = xiBase.indexOf('木');
         if (muIdx >= 0) xiBase.splice(muIdx, 1);
         const muZhIdx = zhongBase.indexOf('木');
         if (muZhIdx >= 0) zhongBase.splice(muZhIdx, 1);
-        if (!jiBase.includes('木')) jiBase.push('木');
-        reasons.push(`【调候】印星(木)过多，木多火塞，木降为忌`);
-      }
-      // 身弱丁火，湿土泄火无益，土降忌
-      if (ratio < 35) {
-        const tuIdx = xiBase.indexOf('土');
-        if (tuIdx >= 0) xiBase.splice(tuIdx, 1);
-        const tuZhIdx = zhongBase.indexOf('土');
-        if (tuZhIdx >= 0) zhongBase.splice(tuZhIdx, 1);
-        if (!jiBase.includes('土')) { jiBase.push('土'); forceJiSet.add('土'); }
-        reasons.push(`【调候】丁火身弱，湿土泄火，土降为忌`);
+        if (!jiBase.includes('木')) { jiBase.push('木'); forceJiSet.add('木'); }
+        reasons.push(`【病药】印星(木)过旺，木多火塞，木降为忌`);
       }
     }
   }
@@ -2957,7 +2948,7 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
   const daJiSet_final = [];
   const xiaoJiSet_final = [];
   jiSet.forEach(w => {
-    if (daJiSet_final.length < 2 && (jiPriority.includes(w) || forceJiSet.has(w))) {
+    if (forceJiSet.has(w)) {
       daJiSet_final.push(w);
     } else if (daJiSet_final.length < 2) {
       daJiSet_final.push(w);
