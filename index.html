@@ -776,7 +776,7 @@ body {
 
     <div id="paipan-result" style="display:none">
       <div style="text-align:center;margin-bottom:10px">
-        <button onclick="showPpInput()" style="background:none;border:1px solid var(--border);color:var(--text3);padding:6px 20px;border-radius:8px;font-size:12px;cursor:pointer">重新排盘 ↑</button>
+        <button onclick="showPpInput()" style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);color:var(--gold);padding:8px 24px;border-radius:10px;font-size:13px;cursor:pointer;letter-spacing:2px">⟳ 重新排盘</button>
       </div>
       <div class="card">
         <div class="res-header">
@@ -4385,6 +4385,8 @@ function renderPaipanResult(raw) {
   const an = raw.analysis;
   document.getElementById('paipan-result').style.display = 'block';
   document.getElementById('pp-input-card').style.display = 'none';
+  // 重置所有折叠状态
+  document.querySelectorAll('.analysis-section.collapsed').forEach(el => el.classList.remove('collapsed'));
 
   // 命主信息
   const el_res_name = document.getElementById('res-name'); if (el_res_name) el_res_name.textContent = raw.name || '（未署名）';
@@ -4727,7 +4729,7 @@ function deleteSaved(idx) {
 function showToast(msg) {
   const t = document.createElement('div');
   t.textContent = msg;
-  t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(30,30,40,0.95);color:#e8e0cc;padding:12px 24px;border-radius:20px;font-size:14px;z-index:9999;border:1px solid rgba(201,168,76,0.3);letter-spacing:1px;';
+  t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(30,30,40,0.95);color:#e8e0cc;padding:10px 24px;border-radius:20px;font-size:13px;z-index:9999;border:1px solid rgba(201,168,76,0.3);letter-spacing:1px;';
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2000);
 }
@@ -5093,7 +5095,7 @@ function selectDayun(idx) {
 }
 
 function selectLiunian(year) {
-  document.querySelectorAll('.dayun-item.selected').forEach(e => e.classList.remove('selected'));
+  // 只清流年高亮，保留大运高亮
   document.querySelectorAll('.ly-item.selected').forEach(e => e.classList.remove('selected'));
   const el = document.querySelector(`[data-ly-year="${year}"]`);
   if (el) el.classList.add('selected');
