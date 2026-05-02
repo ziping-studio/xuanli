@@ -2762,6 +2762,15 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
         if (!jiBase.includes('木')) jiBase.push('木');
         reasons.push(`【调候】印星(木)过多，木多火塞，木降为忌`);
       }
+      // 身弱丁火，湿土泄火无益，土降忌
+      if (ratio < 35) {
+        const tuIdx = xiBase.indexOf('土');
+        if (tuIdx >= 0) xiBase.splice(tuIdx, 1);
+        const tuZhIdx = zhongBase.indexOf('土');
+        if (tuZhIdx >= 0) zhongBase.splice(tuZhIdx, 1);
+        if (!jiBase.includes('土')) { jiBase.push('土'); forceJiSet.add('土'); }
+        reasons.push(`【调候】丁火身弱，湿土泄火，土降为忌`);
+      }
     }
   }
 
@@ -2775,6 +2784,7 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
   //      → 印绶被路径A升喜前，先检查旺衰层是否已把印标为忌
   jiBase.slice().forEach(jiWx => {
     if (EXEMPT_REMEDY.has(jiWx)) return;
+    if (forceJiSet.has(jiWx)) return;                      // 调候/格局强制忌，不被病药覆盖
     if (jiWx === guanSha) return;                          // 官杀永远不升喜
     if (isWang && jiWx === shiShen) return;                // 身旺时食伤本就应喜
     if ((isWang || isZhong) && jiWx === caiXing) return;  // 身旺/中财星在喜/中，不需路径A
@@ -2796,7 +2806,7 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
       const idx = jiBase.indexOf(jiWx);
       if (idx >= 0) jiBase.splice(idx, 1);
       if (!xiBase.includes(jiWx)) xiBase.push(jiWx);
-      reasons.push(`【病药】${Y}偏旺（${Math.round(yPct*100)}%），${jiWx}克之为药，去病救局`);
+      reasons.push(`【病药】${Y}偏旺（${Math.round(yPct*100)}%），${jiWx}势弱不构成威胁，降为闲`);
     }
   });
 
