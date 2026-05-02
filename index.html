@@ -2565,7 +2565,7 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
         note: '偏印格身旺，财星制枭为用，忌印比'
       },
       弱: { force_ji: [caiXing], note: '偏印格身弱，比劫扶身为要，忌财破印' },
-      中: { force_ji: [caiXing, guanSha], note: '偏印格身中，忌财破印，忌官杀克身；食伤影响不大' },
+      中: { force_ji: [caiXing, guanSha], move_xi_to_zhong: [shiShen], note: '偏印格身中，忌财破印，忌官杀克身，食伤被枭夺归闲' },
     },
     // 正财格：官护财，忌比劫。身旺时印比本来在忌里是对的，无需force
     '正财格': {
@@ -2866,7 +2866,7 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
   const yinCount = wxCount[yinShu] || 0;
   const totalWxSum = Object.values(wxCount).reduce((a,b)=>a+b,0) || 1;
   const yinPct = yinCount / totalWxSum;
-  const gejvAlreadyHandlesYin = ['正印格'].includes(gejvName);
+  const gejvAlreadyHandlesYin = ['正印格','七杀格'].includes(gejvName);
   if (!isRuo && !gejvAlreadyHandlesYin && yinPct >= 0.35 && xiBase.includes(yinShu)) {
     // 印占35%以上且非身弱、非正印格→印过旺，降为忌
     xiBase.splice(xiBase.indexOf(yinShu), 1);
@@ -2874,18 +2874,17 @@ function calcXiJi(bazi, dmWx, isQiang, ratio, gejvInfo) {
     const caiForYin = WX_KE_WO[yinShu]; // 克印绶的五行（制印之药）
     if (jiBase.includes(caiForYin)) jiBase.splice(jiBase.indexOf(caiForYin), 1);
     if (!xiBase.includes(caiForYin)) xiBase.push(caiForYin);
-    // 偏印格：枭神过旺时，食神（shiShen）也是制枭之药，升喜
-    if (gejvName === '偏印格') {
+    // 偏印格身旺：枭神过旺时，食神（shiShen）也是制枭之药，升喜
+    // 身中身弱时食伤被枭夺用不上，不升
+    if (gejvName === '偏印格' && isWang) {
       if (jiBase.includes(shiShen)) jiBase.splice(jiBase.indexOf(shiShen), 1);
       if (!xiBase.includes(shiShen)) xiBase.push(shiShen);
       reasons.push(`【病药】印星(${yinShu})过旺(${Math.round(yinPct*100)}%)，印多为忌，财星(${caiForYin})制印，食神(${shiShen})制枭，同升喜`);
+    } else if (gejvName === '偏印格') {
+      reasons.push(`【病药】印星(${yinShu})过旺(${Math.round(yinPct*100)}%)，印多为忌，财星(${caiForYin})制印为药`);
     } else {
       reasons.push(`【病药】印星(${yinShu})过旺(${Math.round(yinPct*100)}%)，印多为忌，财星(${caiForYin})制印为药`);
     }
-  } else if (!isRuo && !gejvAlreadyHandlesYin && yinPct >= 0.28 && xiBase.includes(yinShu)) {
-    xiBase.splice(xiBase.indexOf(yinShu), 1);
-    if (!zhongBase.includes(yinShu)) zhongBase.push(yinShu);
-    reasons.push(`【病药】印星(${yinShu})偏旺(${Math.round(yinPct*100)}%)，印略多，降为中性用神`);
   }
 
   // ===== 7. 寒月（亥/子）水旺→土制水为药（身旺也适用）=====
