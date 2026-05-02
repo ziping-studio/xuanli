@@ -740,7 +740,7 @@ body {
     <button onclick="showSavedPanel()" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);padding:5px 12px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.3);border-radius:8px;color:var(--gold);font-size:12px;cursor:pointer" id="btn-my-bazi">我的命盘</button>
   </div>
   <div class="main-scroll">
-    <div class="card">
+    <div class="card" id="pp-input-card">
       <div class="card-title">命主信息</div>
       <div class="input-row">
         <span class="input-label">姓名</span>
@@ -775,6 +775,9 @@ body {
     </div>
 
     <div id="paipan-result" style="display:none">
+      <div style="text-align:center;margin-bottom:10px">
+        <button onclick="showPpInput()" style="background:none;border:1px solid var(--border);color:var(--text3);padding:6px 20px;border-radius:8px;font-size:12px;cursor:pointer">重新排盘 ↑</button>
+      </div>
       <div class="card">
         <div class="res-header">
           <div class="res-name" id="res-name"></div>
@@ -4381,6 +4384,7 @@ function doPaipan() {
 function renderPaipanResult(raw) {
   const an = raw.analysis;
   document.getElementById('paipan-result').style.display = 'block';
+  document.getElementById('pp-input-card').style.display = 'none';
 
   // 命主信息
   const el_res_name = document.getElementById('res-name'); if (el_res_name) el_res_name.textContent = raw.name || '（未署名）';
@@ -4558,6 +4562,11 @@ function toggleAnalysis(el) {
   el.classList.toggle('collapsed');
 }
 
+function showPpInput() {
+  document.getElementById('pp-input-card').style.display = 'block';
+  document.getElementById('pp-input-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 // ===== 保存命盘 =====
 function saveBazi() {
   if (!AppState.bazi1) return;
@@ -4661,12 +4670,46 @@ function loadSaved(idx) {
     const list = JSON.parse(localStorage.getItem('savedBaziList') || '[]');
     const item = list[idx];
     if (!item) return;
-    AppState.bazi1 = item.result;
-    AppState.baziInput1 = item.input;
-    AppState.profile1 = item.profile;
-    renderPaipanResult(item.result);
-    showToast('已加载 ' + (item.profile?.name || '命盘'));
-  } catch(e) {}
+    const inp = item.input;
+    const prof = item.profile || {};
+    if (inp && inp.year && inp.month && inp.day !== undefined) {
+      // 用保存的公历信息重新排盘（使用最新分析逻辑）
+      const raw = paipan(inp.year, inp.month, inp.day, inp.hour || 12, prof.gender || '男');
+      const qr = calcQiangRuo(raw);
+      const gejvInfo = calcGejv(raw);
+      const xijiResult = calcXiJi(raw, raw.dayMasterWx, qr.isQiang, qr.ratio, gejvInfo);
+      const { xi, zhong, daJi, xiaoJi, yongshenReason, congge } = xijiResult;
+      const gejv = congge || gejvInfo.gejv;
+      const gejvDesc = gejvInfo.gejvDesc || '';
+      // 重新生成analysis（调用doPaipan中的分析逻辑）
+      // 简化：直接设置输入框值后调用doPaipan
+      document.getElementById('pp-name').value = prof.name || '';
+      if (prof.gender) setGender(prof.gender);
+      setCalType('solar');
+      document.getElementById('pp-year').value = inp.year;
+      const monthSel = document.getElementById('pp-month');
+      monthSel.value = inp.month - 1;
+      const daySel = document.getElementById('pp-day');
+      daySel.value = inp.day - 1;
+      const hourSel = document.getElementById('pp-hour');
+      // 找到对应时辰
+      const h = inp.hour !== undefined ? inp.hour : 12;
+      for (let i = 0; i < hourSel.options.length; i++) {
+        if (parseInt(hourSel.options[i].value) === h) { hourSel.value = h; break; }
+      }
+      doPaipan();
+      showToast('已加载 ' + (prof.name || '命盘'));
+    } else {
+      // 旧格式数据，直接渲染
+      AppState.bazi1 = item.result;
+      AppState.baziInput1 = item.input;
+      AppState.profile1 = item.profile;
+      renderPaipanResult(item.result);
+      showToast('已加载 ' + (prof.name || '命盘'));
+    }
+  } catch(e) {
+    console.error('loadSaved error', e);
+  }
 }
 
 function deleteSaved(idx) {
@@ -5137,28 +5180,51 @@ function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji, dy) {
       }
     });
     
-    // 文字解读
-    const ssInterpMap = {
-      '正官': '代表事业、名誉、管束之力',
-      '七杀': '代表压力、竞争、外部挑战',
-      '正印': '代表贵人、学识、保护力量',
-      '偏印': '代表独创思维、玄学、暗中助力',
-      '正财': '代表稳定收入、务实机遇',
-      '偏财': '代表意外之财、投资机会',
-      '食神': '代表才华展现、口福享受',
-      '伤官': '代表创造力爆发、表达欲望',
-      '比肩': '代表同辈助力、竞争并存',
-      '劫财': '代表争夺、合作中的摩擦',
+    // 综合分析：格局×十神 + 合冲事件
+    const ratio2 = bazi.qiangRuoRatio || 50;
+    const isSW = ratio2 >= 50;
+    const gejvN = bazi.analysis && bazi.analysis.gejv || '';
+    
+    // 格局×十神分析表（10格局×10十神）
+    const GS = {
+      '正官格': {'正财':'财来生官，格局得助，利事业名誉','偏财':'偏财生官，社交带来机遇','正印':'官印相生，仕途顺遂，利考试升职','偏印':'官生偏印护身，暗中有贵人','食神':'食神泄身但不克官，才华可用须节制','伤官':'伤官见官，最忌！防官非口舌、职场冲突','比肩':isSW?'比劫争官，竞争激烈，防同事争位':'帮身担官，压力减轻','劫财':isSW?'劫财争官，人际纠纷多':'帮身可抗官压','正官':isSW?'官星叠加，压力倍增但名声显':'官来克身，压力重须有印化解','七杀':'官杀混杂，号令不一，局势混乱'},
+      '七杀格': {'食神':'食神制杀，化解压力，大吉之运','伤官':'伤官制杀，方式激烈，防矫枉过正','正印':'印化杀生身，化压力为助力，利学业','偏印':'枭印化杀，暗中转危为安','正财':'财生杀旺，压力加大，不利','偏财':'偏财滋杀，防因财招祸','比肩':'帮身扛杀，兄弟相助','劫财':'劫财帮身但也惹事，功过参半','正官':'官杀混杂，内外压力夹击','七杀':isSW?'杀逢杀，压力大但能扛住':'杀重身轻，须防灾祸'},
+      '正印格': {'正官':'官来生印，格局得助，利学业仕途','七杀':'杀来生印，化压力为学识，越挫越勇','正财':'财来破印，贪财损名，防因利失义','偏财':'偏财克印，投机损贵人运','食神':isSW?'食神泄秀，才华有出口':'食神泄身，精力分散','伤官':isSW?'伤官泄秀，创造力强但须有印制':'伤官泄身太重，防内耗','比肩':isSW?'印比太旺，防懒惰依赖':'比肩帮身，印比互助','劫财':isSW?'比劫太重，须食伤泄':'劫财帮身可用','正印':isSW?'印星太重，过度保护反为害':'印逢印，贵人叠加，大利','偏印':isSW?'印重变枭，思虑过度':'偏印助力，利专业领域'},
+      '偏印格': {'偏财':'偏财制枭，化解负面，利求财','正财':'财制枭神，现实利益纠偏','七杀':'杀生枭，化暴力为智慧','正官':'官生枭，体制内有发展','食神':'枭神夺食！才华被压制，最忌','伤官':'枭伤并见，内心矛盾，防抑郁','比肩':isSW?'帮身但枭更重，无益':'帮身对抗枭压','劫财':'劫财助身但也分财','正印':isSW?'印重累赘':'正印补益','偏印':isSW?'枭上加枭，钻牛角尖':'偏印帮身，利玄学研究'},
+      '正财格': {'正官':'财生官，有钱有地位，格局得助','七杀':'财生杀，因财招压力，防破财','食神':'食神生财，才华变现，大吉','伤官':'伤官生财，创意赚钱，利创业','正印':'印财交战，名利难两全','偏印':'枭印碍财，求财受阻','比肩':'比劫夺财！防合伙纠纷、朋友借钱','劫财':'劫财夺财，最忌！防破财失物','正财':isSW?'财星叠加，利求财':'财多身弱，劳碌难守','偏财':isSW?'正偏财并见，财路拓宽':'财多身扛不住'},
+      '偏财格': {'食神':'食神生偏财，创意变横财，商业运好','伤官':'伤官生财，技术赚钱','正官':'财生官，事业稳定','七杀':'财生杀，投资有风险','正印':'印碍财路，学业与赚钱冲突','偏印':'枭碍偏财，投资不顺','比肩':'比劫争财，竞争者出现','劫财':'劫财争偏财，最忌合伙和借贷','正财':'正偏财双至，财运旺','偏财':isSW?'偏财叠加，大进大出':'财多压身，有财无福'},
+      '食神格': {'正财':'食神生财，才华变现，格局最佳搭配','偏财':'食神生偏财，利投资创业','正印':isSW?'印制食神，才华被约束':'印生身助食神','偏印':'枭神夺食！最凶，才华被压制','正官':'食神与官无直接冲突，平稳','七杀':'食神制杀，化解压力，有担当','比肩':isSW?'比劫太旺，食神泄不完':'帮身助食神发挥','劫财':isSW?'劫食并见，消耗大':'帮身利食神','食神':isSW?'食神太多变伤官':'食神得力，才华尽显','伤官':'食伤混杂，表达过度，防口舌'},
+      '伤官格': {'正印':'伤官配印，最经典成格！才华有涵养驾驭','偏印':'枭印制伤官，才华被压但有深度','正财':'伤官生财，才华直接变钱，利创业','偏财':'伤官生偏财，投资有眼光','正官':'伤官见官！大凶，防官非、职场灾、婚姻危机','七杀':'伤官制杀，化叛逆为战斗力','比肩':isSW?'帮身助伤官更烈':'帮身让伤官有底气','劫财':isSW?'劫助伤官更猛烈':'帮身可用','食神':'食伤并见，才华泛滥，防过度消耗','伤官':isSW?'伤官叠加，才华爆发但易过激':'伤官泄身太重'},
+      '建禄格': {'正官':'官制比劫，成格之运，利事业升迁','七杀':'杀制禄刃，利竞争开拓','食神':'食神泄秀，才华输出，利创作表达','伤官':'伤官泄秀，创造力强但防口舌','正财':'身旺任财，利求财置业','偏财':'身旺驾偏财，投资运好','正印':'印比太旺，无用武之地，防懈怠','偏印':'枭印加身，思虑多行动少','比肩':'比劫再来，力量过剩无出口','劫财':'劫财加重，争夺消耗大'},
+      '月刃格': {'正官':'官制刃，刀入鞘，利事业名誉','七杀':'杀制刃，大将格局，利竞争搏杀','食神':'食神泄刃气，化刚为柔','伤官':'伤官泄刃，创造力强但须防冲动','正财':'身旺可担财，利求财','偏财':'身旺驾偏财，大进大出','正印':'印助刃更旺，力量过剩','偏印':'枭助刃，暴躁加重','比肩':'刃逢比劫，刚过易折','劫财':'刃见刃，凶险，防冲动惹祸'},
     };
-    const ssDesc = ssInterpMap[dmSS] || '';
-    const isXi = xi.includes(rTgWx);
-    const isJi = ji.includes(rTgWx);
-    const xijiWord = isXi ? '喜神临运，有利' : (isJi ? '忌神临运，需谨慎' : '闲神临运，影响平淡');
-    const interpText = ssDesc ? `${dmSS}运，${ssDesc}。${xijiWord}。` : `${xijiWord}。`;
+    
+    // 合冲特殊事件
+    const hcEvents = [];
+    const tagTexts = tags.map(t => t.replace(/<[^>]+>/g,''));
+    tagTexts.forEach(t => {
+      if (t.includes('冲') && t.includes('日柱')) hcEvents.push('冲动婚姻宫，感情或居住有变动');
+      if (t.includes('冲') && t.includes('月柱')) hcEvents.push('冲动事业宫，工作环境有变化');
+      if (t.includes('冲') && t.includes('年柱')) hcEvents.push('冲动祖上宫，家庭或外部环境变动');
+      if (t.includes('冲') && t.includes('时柱')) hcEvents.push('冲动子女宫，子女或下属有变化');
+      if (t.includes('刑') && t.includes('日柱')) hcEvents.push('刑入婚姻宫，感情易生摩擦');
+      if (t.includes('刑') && t.includes('月柱')) hcEvents.push('刑入事业宫，工作中防口舌纠纷');
+      if (t.includes('三合') || t.includes('三会')) hcEvents.push('地支成局，该五行力量大增');
+      if (t.includes('三刑')) hcEvents.push('三刑会聚，防官非、伤灾、人际冲突');
+    });
+    
+    const tgGejvAn = (GS[gejvN] && GS[gejvN][dmSS]) || '';
+    const dzGejvAn = (dzSS !== dmSS) ? ((GS[gejvN] && GS[gejvN][dzSS]) || '') : '';
+    
+    const anParts = [];
+    if (tgGejvAn) anParts.push(tgGejvAn);
+    if (dzGejvAn) anParts.push(dzGejvAn);
+    [...new Set(hcEvents)].forEach(e => anParts.push(e));
+    const interpText = anParts.join('。') + (anParts.length ? '。' : '');
     
     return `<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:8px">
       <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${rLabel} ${rTg}${rDz}</div>
-      <div style="display:flex;gap:20px;margin-bottom:${tags.length?'10':'0'}px">
+      <div style="display:flex;gap:20px;margin-bottom:${tags.length||interpText?'10':'0'}px">
         <div style="text-align:center">
           <div style="font-size:9px;color:var(--text3)">天干</div>
           <div style="font-size:24px;font-weight:700;color:${wxColor(rTgWx)}">${rTg}</div>
@@ -5171,7 +5237,7 @@ function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji, dy) {
         </div>
       </div>
       ${tags.length ? `<div class="hcxh-tags" style="margin-bottom:8px">${tags.join('')}</div>` : ''}
-      <div style="font-size:12px;color:var(--text2);line-height:1.8;padding-top:6px;border-top:1px solid var(--border)">${interpText}</div>
+      ${interpText ? `<div style="font-size:12px;color:var(--text2);line-height:1.8;padding-top:6px;border-top:1px solid var(--border)">${interpText}</div>` : ''}
     </div>`;
   }
   
@@ -5303,18 +5369,6 @@ function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji, dy) {
     '正印':'利学习考证，贵人扶持，身体转好',
     '偏印':'利研究专业技能，但防思虑过度',
   };
-  const tgText = ssDesc[dmSS] || '';
-  const dzText = ssDesc[dzSS2] || '';
-  if (tgText || dzText) {
-    const lines = [];
-    if (tgText) lines.push(`天干${dmSS}：${tgText}`);
-    if (dzText && dzSS2 !== dmSS) lines.push(`地支${dzSS2}：${dzText}`);
-    bodyHtml += `<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:8px">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">运势提示</div>
-      <div style="font-size:12px;color:var(--text2);line-height:1.8">${lines.join('<br>')}</div>
-    </div>`;
-  }
-  
   document.getElementById('dayun-detail-body').innerHTML = bodyHtml;
   card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
