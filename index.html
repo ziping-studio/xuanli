@@ -5211,20 +5211,11 @@ function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji, dy) {
     if (dzGejvAn) anParts.push(dzGejvAn);
     
     // === 追加：根据原局具体情况细化分析 ===
-    const origTgs = [bazi.year.tg, bazi.month.tg, bazi.hour.tg]; // 排除日干
     const origAllTgs = [bazi.year.tg, bazi.month.tg, bazi.day.tg, bazi.hour.tg];
     const origDzs = pillars.map(p => bazi[p].dz);
     const dm = bazi.day.tg;
     
-    // 1. 运干十神在原局已有vs没有
-    const sameSScount = origTgs.filter(t => getShishen(dm, t) === dmSS).length;
-    if (sameSScount >= 2) {
-      anParts.push(`原局已有${sameSScount}个${dmSS}，再逢${dmSS}运力量堆积，影响加倍`);
-    } else if (sameSScount === 0 && dmSS !== '比肩' && dmSS !== '劫财') {
-      anParts.push(`原局无${dmSS}，此运${dmSS}初现，新的变化开始`);
-    }
-    
-    // 2. 运干合住原局某十神
+    // 1. 运干合住原局某十神
     const heMap2 = {'甲':'己','乙':'庚','丙':'辛','丁':'壬','戊':'癸','己':'甲','庚':'乙','辛':'丙','壬':'丁','癸':'戊'};
     const heTarget = origAllTgs.find(t => heMap2[rTg] === t && t !== dm);
     if (heTarget) {
