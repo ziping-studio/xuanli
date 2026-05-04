@@ -794,29 +794,29 @@ body {
       </div>
       <div class="card">
         <div class="card-title">命局分析</div>
-        <div class="analysis-section" onclick="toggleAnalysis(this)">
-          <div class="analysis-label">性格特质 <span class="analysis-arrow">▾</span></div>
-          <div class="analysis-text analysis-body" id="res-char"></div>
+        <div class="analysis-section">
+          <div class="analysis-label">性格特质</div>
+          <div class="analysis-text" id="res-char"></div>
         </div>
-        <div class="analysis-section" onclick="toggleAnalysis(this)">
-          <div class="analysis-label">命局综评 <span class="analysis-arrow">▾</span></div>
-          <div class="analysis-text analysis-body" id="res-overview"></div>
+        <div class="analysis-section">
+          <div class="analysis-label">命局综评</div>
+          <div class="analysis-text" id="res-overview"></div>
         </div>
-        <div class="analysis-section" onclick="toggleAnalysis(this)">
-          <div class="analysis-label">事业财运 <span class="analysis-arrow">▾</span></div>
-          <div class="analysis-text analysis-body" id="res-career"></div>
+        <div class="analysis-section">
+          <div class="analysis-label">事业财运</div>
+          <div class="analysis-text" id="res-career"></div>
         </div>
-        <div class="analysis-section" onclick="toggleAnalysis(this)">
-          <div class="analysis-label">感情姻缘 <span class="analysis-arrow">▾</span></div>
-          <div class="analysis-text analysis-body" id="res-love"></div>
+        <div class="analysis-section">
+          <div class="analysis-label">感情姻缘</div>
+          <div class="analysis-text" id="res-love"></div>
         </div>
-        <div class="analysis-section" onclick="toggleAnalysis(this)">
-          <div class="analysis-label">幸运参考 <span class="analysis-arrow">▾</span></div>
-          <div class="analysis-text analysis-body" id="res-lucky"></div>
+        <div class="analysis-section">
+          <div class="analysis-label">幸运参考</div>
+          <div class="analysis-text" id="res-lucky"></div>
         </div>
-        <div class="analysis-section" onclick="toggleAnalysis(this)">
-          <div class="analysis-label">健康注意 <span class="analysis-arrow">▾</span></div>
-          <div class="analysis-text analysis-body" id="res-health"></div>
+        <div class="analysis-section">
+          <div class="analysis-label">健康注意</div>
+          <div class="analysis-text" id="res-health"></div>
         </div>
       </div>
       <button class="btn-save" onclick="saveBazi()">✦ 保存此命盘</button>
@@ -4555,6 +4555,7 @@ function toggleAnalysis(el) {
 
 function showPpInput() {
   document.getElementById('pp-input-card').style.display = 'block';
+  document.getElementById('paipan-result').style.display = 'none';
   document.getElementById('pp-input-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -5281,25 +5282,25 @@ function showDayunDetail(type, tg, dz, tgWx, dzWx, label, bazi, xiji, dy) {
   // 顶部原局+运柱展示
   let topPillars = pillars.map((p,i) => {
     const t = bazi[p].tg, d2 = bazi[p].dz;
-    return `<div style="text-align:center;background:var(--bg2);border-radius:8px;padding:6px 10px;flex:1;max-width:72px">
+    return `<div style="text-align:center;background:var(--bg2);border-radius:8px;padding:8px 8px;flex:1;max-width:72px">
       <div style="font-size:9px;color:var(--text3)">${pillarNames[i]}</div>
-      <div style="font-size:20px;font-weight:700;color:${wxColor(TG_WX[t])}">${t}</div>
-      <div style="font-size:20px;font-weight:700;color:${wxColor(DZ_BEN[d2])}">${d2}</div>
+      <div style="font-size:22px;font-weight:700;color:${wxColor(TG_WX[t])};margin:4px 0">${t}</div>
+      <div style="font-size:22px;font-weight:700;color:${wxColor(DZ_BEN[d2])}">${d2}</div>
     </div>`;
   }).join('');
   
   // 右侧运柱
   if (type === '流年' && dy) {
-    topPillars += `<div style="text-align:center;border:1px solid var(--border);border-radius:8px;padding:6px 6px;flex:1;max-width:72px">
+    topPillars += `<div style="text-align:center;border:1px solid var(--border);border-radius:8px;padding:8px 8px;flex:1;max-width:72px">
       <div style="font-size:9px;color:var(--text3)">大运</div>
-      <div style="font-size:18px;font-weight:700;color:${wxColor(dy.tgWx)}">${dy.tg}</div>
-      <div style="font-size:18px;font-weight:700;color:${wxColor(dy.dzWx)}">${dy.dz}</div>
+      <div style="font-size:22px;font-weight:700;color:${wxColor(dy.tgWx)};margin:4px 0">${dy.tg}</div>
+      <div style="font-size:22px;font-weight:700;color:${wxColor(dy.dzWx)}">${dy.dz}</div>
     </div>`;
   }
-  topPillars += `<div style="text-align:center;border:1px solid var(--gold);border-radius:8px;padding:6px 6px;flex:1;max-width:72px">
+  topPillars += `<div style="text-align:center;border:1px solid var(--gold);border-radius:8px;padding:8px 8px;flex:1;max-width:72px">
     <div style="font-size:9px;color:var(--gold)">${type}</div>
-    <div style="font-size:18px;font-weight:700;color:${wxColor(tgWx)}">${tg}</div>
-    <div style="font-size:18px;font-weight:700;color:${wxColor(dzWx)}">${dz}</div>
+    <div style="font-size:22px;font-weight:700;color:${wxColor(tgWx)};margin:4px 0">${tg}</div>
+    <div style="font-size:22px;font-weight:700;color:${wxColor(dzWx)}">${dz}</div>
   </div>`;
 
   // 组装HTML
