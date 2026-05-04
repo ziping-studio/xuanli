@@ -761,7 +761,7 @@ body {
         </div>
       </div>
       <div class="input-row" style="margin-top:10px">
-        <span class="input-label">年份</span>
+        <span class="input-label">日期</span>
         <input id="pp-year" class="input-text year-input" type="number" placeholder="年" min="1900" max="2100" value="1990" onchange="if(currentCalType==='lunar'){buildMonthSelect('pp-month','lunar','pp-year')}">
         <select id="pp-month" class="input-select"></select>
         <select id="pp-day"   class="input-select"></select>
@@ -769,7 +769,7 @@ body {
       <div id="leap-group" style="display:none"></div>
       <div class="input-row">
         <span class="input-label">时辰</span>
-        <select id="pp-hour" class="input-select"></select>
+        <select id="pp-hour" class="input-select" style="flex:1"></select>
       </div>
       <div class="input-row">
         <span class="input-label">真时</span>
@@ -779,6 +779,13 @@ body {
         </div>
       </div>
       <div id="zt-location" style="display:none">
+        <div class="input-row">
+          <span class="input-label">时间</span>
+          <select id="pp-zt-hour" class="input-select" style="flex:1"></select>
+          <span style="color:var(--text3);font-size:12px">时</span>
+          <select id="pp-zt-min" class="input-select" style="flex:1"></select>
+          <span style="color:var(--text3);font-size:12px">分</span>
+        </div>
         <div class="input-row">
           <span class="input-label">地点</span>
           <div class="btn-group" style="flex:1">
@@ -934,11 +941,15 @@ body {
   </div>
   <div class="main-scroll">
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div class="hp-section-label" style="margin-bottom:0">男方信息</div>
         <button onclick="showHpSavedPicker('m')" style="padding:4px 10px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);border-radius:6px;color:var(--gold);font-size:11px;cursor:pointer">从命盘选择</button>
       </div>
       <div id="hp-m-selected" style="display:none;margin:8px 0;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:13px;color:var(--gold2)"></div>
+      <div class="input-row">
+        <span class="input-label">姓名</span>
+        <input id="hp-m-name" class="input-text" type="text" placeholder="选填" style="flex:1">
+      </div>
       <div class="input-row">
         <span class="input-label">历法</span>
         <div class="btn-group" style="flex:1">
@@ -955,7 +966,7 @@ body {
       </div>
       <div class="input-row">
         <span class="input-label">时辰</span>
-        <select id="hp-m-hour" class="input-select"></select>
+        <select id="hp-m-hour" class="input-select" style="flex:1"></select>
       </div>
       <div class="input-row">
         <span class="input-label">真时</span>
@@ -965,6 +976,13 @@ body {
         </div>
       </div>
       <div id="hp-m-zt-loc" style="display:none">
+        <div class="input-row">
+          <span class="input-label">时间</span>
+          <select id="hp-m-zt-hour" class="input-select" style="flex:1"></select>
+          <span style="color:var(--text3);font-size:12px">时</span>
+          <select id="hp-m-zt-min" class="input-select" style="flex:1"></select>
+          <span style="color:var(--text3);font-size:12px">分</span>
+        </div>
         <div class="input-row">
           <span class="input-label">地点</span>
           <div class="btn-group" style="flex:1">
@@ -985,11 +1003,15 @@ body {
       </div>
     </div>
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div class="hp-section-label" style="margin-bottom:0">女方信息</div>
         <button onclick="showHpSavedPicker('f')" style="padding:4px 10px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);border-radius:6px;color:var(--gold);font-size:11px;cursor:pointer">从命盘选择</button>
       </div>
       <div id="hp-f-selected" style="display:none;margin:8px 0;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:13px;color:var(--gold2)"></div>
+      <div class="input-row">
+        <span class="input-label">姓名</span>
+        <input id="hp-f-name" class="input-text" type="text" placeholder="选填" style="flex:1">
+      </div>
       <div class="input-row">
         <span class="input-label">历法</span>
         <div class="btn-group" style="flex:1">
@@ -1006,7 +1028,7 @@ body {
       </div>
       <div class="input-row">
         <span class="input-label">时辰</span>
-        <select id="hp-f-hour" class="input-select"></select>
+        <select id="hp-f-hour" class="input-select" style="flex:1"></select>
       </div>
       <div class="input-row">
         <span class="input-label">真时</span>
@@ -1016,6 +1038,13 @@ body {
         </div>
       </div>
       <div id="hp-f-zt-loc" style="display:none">
+        <div class="input-row">
+          <span class="input-label">时间</span>
+          <select id="hp-f-zt-hour" class="input-select" style="flex:1"></select>
+          <span style="color:var(--text3);font-size:12px">时</span>
+          <select id="hp-f-zt-min" class="input-select" style="flex:1"></select>
+          <span style="color:var(--text3);font-size:12px">分</span>
+        </div>
         <div class="input-row">
           <span class="input-label">地点</span>
           <div class="btn-group" style="flex:1">
@@ -3701,6 +3730,42 @@ function buildHourSelect(id) {
 
 // ===== 排盘页交互 =====
 let currentCalType = 'solar';
+// 时辰选择 ↔ 具体时间同步
+function syncHourToTime() {
+  const idx = parseInt(document.getElementById('pp-hour').value) || 0;
+  const h = HOURS[idx].val;
+  document.getElementById('pp-time').value = String(h).padStart(2,'0') + ':00';
+}
+function syncTimeToHour() {
+  const t = document.getElementById('pp-time').value;
+  if (!t) return;
+  const h = parseInt(t.split(':')[0]);
+  // 找对应时辰
+  for (let i = 0; i < HOURS.length; i++) {
+    const lo = HOURS[i].val;
+    const hi = i < HOURS.length - 1 ? HOURS[i+1].val : 24;
+    if (h >= lo && h < hi) { document.getElementById('pp-hour').value = i; return; }
+  }
+  // 子时特殊：23-1点
+  if (h >= 23) document.getElementById('pp-hour').value = 0;
+}
+function syncHourToTimeHp(side) {
+  const idx = parseInt(document.getElementById(`hp-${side}-hour`).value) || 0;
+  const h = HOURS[idx].val;
+  document.getElementById(`hp-${side}-time`).value = String(h).padStart(2,'0') + ':00';
+}
+function syncTimeToHourHp(side) {
+  const t = document.getElementById(`hp-${side}-time`).value;
+  if (!t) return;
+  const h = parseInt(t.split(':')[0]);
+  for (let i = 0; i < HOURS.length; i++) {
+    const lo = HOURS[i].val;
+    const hi = i < HOURS.length - 1 ? HOURS[i+1].val : 24;
+    if (h >= lo && h < hi) { document.getElementById(`hp-${side}-hour`).value = i; return; }
+  }
+  if (h >= 23) document.getElementById(`hp-${side}-hour`).value = 0;
+}
+
 let useZhenTaiyang = false;
 let locMode = 'cn';
 
@@ -3737,12 +3802,22 @@ const CITY_LNG = {
   '香港':{'香港':114.2},'澳门':{'澳门':113.5},
 };
 
+function buildZtTimeSelect(hourId, minId) {
+  const hSel = document.getElementById(hourId);
+  const mSel = document.getElementById(minId);
+  if (!hSel || hSel.options.length > 0) return;
+  for (let h = 0; h < 24; h++) { const o = document.createElement('option'); o.value = h; o.textContent = String(h).padStart(2,'0'); hSel.appendChild(o); }
+  hSel.value = 12;
+  for (let m = 0; m < 60; m += 5) { const o = document.createElement('option'); o.value = m; o.textContent = String(m).padStart(2,'0'); mSel.appendChild(o); }
+  mSel.value = 0;
+}
+
 function setZhenTaiyang(on) {
   useZhenTaiyang = on;
   document.getElementById('btn-zt-off').classList.toggle('active', !on);
   document.getElementById('btn-zt-on').classList.toggle('active', on);
   document.getElementById('zt-location').style.display = on ? 'block' : 'none';
-  if (on) initProvinceSelect();
+  if (on) { initProvinceSelect(); buildZtTimeSelect('pp-zt-hour','pp-zt-min'); }
 }
 
 function setLocMode(mode) {
@@ -3868,6 +3943,7 @@ function setHpZt(side, on) {
   document.getElementById(`hp-${side}-zt-on`).classList.toggle('active', on);
   document.getElementById(`hp-${side}-zt-loc`).style.display = on ? 'block' : 'none';
   if (on) {
+    buildZtTimeSelect(`hp-${side}-zt-hour`,`hp-${side}-zt-min`);
     const sel = document.getElementById(`hp-${side}-province`);
     if (sel.options.length <= 1) {
       Object.keys(CITY_LNG).forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
@@ -3964,20 +4040,26 @@ function doPaipan() {
 
   let hour = HOURS[hourIdx].val;
   
-  // 真太阳时修正
+  // 真太阳时修正：用具体时间+经度换算
   let ztInfo = '';
   if (useZhenTaiyang) {
+    const hh = parseInt(document.getElementById('pp-zt-hour').value) || 0;
+    const mm = parseInt(document.getElementById('pp-zt-min').value) || 0;
     const lng = getSelectedLng();
     if (lng !== null) {
-      const correction = calcZtCorrection(lng);
-      const correctedMinutes = hour * 60 + correction;
-      const correctedHour = Math.floor(correctedMinutes / 60);
-      const normalizedHour = ((correctedHour % 24) + 24) % 24;
-      // 只有修正后时辰变了才有影响
-      if (normalizedHour !== hour) {
-        ztInfo = `（真太阳时修正：北京时间${hour}时 → 当地${normalizedHour}时）`;
-        hour = normalizedHour;
-      }
+      const totalMin = hh * 60 + mm;
+      const correction = Math.round(calcZtCorrection(lng));
+      const correctedMin = totalMin + correction;
+      const correctedHH = ((Math.floor(correctedMin / 60) % 24) + 24) % 24;
+      const correctedMM = ((correctedMin % 60) + 60) % 60;
+      const origShichen = HOURS[hourIdx].label.split(' ')[0];
+      let newHourIdx = 0;
+      if (correctedHH >= 23 || correctedHH < 1) newHourIdx = 0;
+      else { for (let i = 1; i < HOURS.length; i++) { if (correctedHH >= HOURS[i].val && correctedHH < HOURS[i].val + 2) { newHourIdx = i; break; } } }
+      const newShichen = HOURS[newHourIdx].label.split(' ')[0];
+      hour = HOURS[newHourIdx].val;
+      ztInfo = `真太阳时修正：北京时间${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')} → 当地${String(correctedHH).padStart(2,'0')}:${String(correctedMM).padStart(2,'0')}`;
+      if (origShichen !== newShichen) ztInfo += `（${origShichen}→${newShichen}，时柱已变）`;
     }
   }
   
@@ -4631,11 +4713,16 @@ function renderPaipanResult(raw) {
     : '';
   const el_res_date_str = document.getElementById('res-date-str'); if (el_res_date_str) el_res_date_str.textContent = dateStr;
 
-  if (raw.jieqiWarning) {
-    const el_jieqi_warning = document.getElementById('jieqi-warning'); if (el_jieqi_warning) el_jieqi_warning.textContent = '⚠ ' + raw.jieqiWarning;
-    document.getElementById('jieqi-warning').style.display = 'block';
+  const el_jw = document.getElementById('jieqi-warning');
+  const warnings = [];
+  if (raw.jieqiWarning) warnings.push('⚠ ' + raw.jieqiWarning);
+  if (raw.ztInfo) warnings.push(raw.ztInfo);
+  if (warnings.length) {
+    el_jw.textContent = warnings.join(' | ');
+    el_jw.style.display = 'block';
+    el_jw.style.color = raw.jieqiWarning ? 'var(--fire)' : 'var(--gold)';
   } else {
-    document.getElementById('jieqi-warning').style.display = 'none';
+    el_jw.style.display = 'none';
   }
 
   // 神煞（提前计算，供地支行渲染使用）
@@ -5677,12 +5764,16 @@ function getHpSolar(side) {
   const hourIdx = parseInt(document.getElementById(prefix + 'hour').value);
   const calType = hpState[side].calType;
   let hour = HOURS[hourIdx].val;
-  // 真太阳时修正
+  // 真太阳时修正：用具体时间+经度
   if (hpState[side].zt) {
+    const hh = parseInt(document.getElementById(`hp-${side}-zt-hour`).value) || 0;
+    const mm = parseInt(document.getElementById(`hp-${side}-zt-min`).value) || 0;
     const lng = getHpLng(side);
     if (lng !== null) {
-      const correctedMinutes = hour * 60 + calcZtCorrection(lng);
-      hour = ((Math.floor(correctedMinutes / 60) % 24) + 24) % 24;
+      const correctedMin = hh * 60 + mm + Math.round(calcZtCorrection(lng));
+      const correctedHH = ((Math.floor(correctedMin / 60) % 24) + 24) % 24;
+      if (correctedHH >= 23 || correctedHH < 1) hour = 0;
+      else { for (let i = 1; i < HOURS.length; i++) { if (correctedHH >= HOURS[i].val && correctedHH < HOURS[i].val + 2) { hour = HOURS[i].val; break; } } }
     }
   }
   if (calType === 'lunar') {
@@ -5763,6 +5854,10 @@ function showHpSavedPicker(side) {
       }
 
       hpSavedData[side] = item;
+      // 自动填入姓名
+      const nameInput = document.getElementById(`hp-${side}-name`);
+      if (nameInput) nameInput.value = name || '';
+      selEl.style.display = 'none';
       overlay.remove();
       showToast(`已选择${side === 'm' ? '男方' : '女方'}：${name}`);
     };
