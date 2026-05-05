@@ -781,9 +781,9 @@ body {
       <div id="zt-location" style="display:none">
         <div class="input-row">
           <span class="input-label">时间</span>
-          <select id="pp-zt-hour" class="input-select" style="flex:1"></select>
+          <select id="pp-zt-hour" class="input-select" onchange="syncZtToShichen()" style="flex:1"></select>
           <span style="color:var(--text3);font-size:12px">时</span>
-          <select id="pp-zt-min" class="input-select" style="flex:1"></select>
+          <select id="pp-zt-min" class="input-select" onchange="syncZtToShichen()" style="flex:1"></select>
           <span style="color:var(--text3);font-size:12px">分</span>
         </div>
         <div class="input-row">
@@ -978,9 +978,9 @@ body {
       <div id="hp-m-zt-loc" style="display:none">
         <div class="input-row">
           <span class="input-label">时间</span>
-          <select id="hp-m-zt-hour" class="input-select" style="flex:1"></select>
+          <select id="hp-m-zt-hour" class="input-select" onchange="syncHpZtToShichen('m')" style="flex:1"></select>
           <span style="color:var(--text3);font-size:12px">时</span>
-          <select id="hp-m-zt-min" class="input-select" style="flex:1"></select>
+          <select id="hp-m-zt-min" class="input-select" onchange="syncHpZtToShichen('m')" style="flex:1"></select>
           <span style="color:var(--text3);font-size:12px">分</span>
         </div>
         <div class="input-row">
@@ -1040,9 +1040,9 @@ body {
       <div id="hp-f-zt-loc" style="display:none">
         <div class="input-row">
           <span class="input-label">时间</span>
-          <select id="hp-f-zt-hour" class="input-select" style="flex:1"></select>
+          <select id="hp-f-zt-hour" class="input-select" onchange="syncHpZtToShichen('f')" style="flex:1"></select>
           <span style="color:var(--text3);font-size:12px">时</span>
-          <select id="hp-f-zt-min" class="input-select" style="flex:1"></select>
+          <select id="hp-f-zt-min" class="input-select" onchange="syncHpZtToShichen('f')" style="flex:1"></select>
           <span style="color:var(--text3);font-size:12px">分</span>
         </div>
         <div class="input-row">
@@ -3802,6 +3802,23 @@ const CITY_LNG = {
   '香港':{'香港':114.2},'澳门':{'澳门':113.5},
 };
 
+function syncZtToShichen() {
+  const hh = parseInt(document.getElementById('pp-zt-hour').value) || 0;
+  // 根据经度修正后的小时找时辰
+  const lng = getSelectedLng();
+  let correctedHH = hh;
+  if (lng !== null) {
+    const mm = parseInt(document.getElementById('pp-zt-min').value) || 0;
+    const correctedMin = hh * 60 + mm + Math.round(calcZtCorrection(lng));
+    correctedHH = ((Math.floor(correctedMin / 60) % 24) + 24) % 24;
+  }
+  // 找对应时辰索引
+  let idx = 0;
+  if (correctedHH >= 23 || correctedHH < 1) idx = 0;
+  else { for (let i = 1; i < HOURS.length; i++) { if (correctedHH >= HOURS[i].val && correctedHH < HOURS[i].val + 2) { idx = i; break; } } }
+  document.getElementById('pp-hour').value = idx;
+}
+
 function buildZtTimeSelect(hourId, minId) {
   const hSel = document.getElementById(hourId);
   const mSel = document.getElementById(minId);
@@ -3817,7 +3834,7 @@ function setZhenTaiyang(on) {
   document.getElementById('btn-zt-off').classList.toggle('active', !on);
   document.getElementById('btn-zt-on').classList.toggle('active', on);
   document.getElementById('zt-location').style.display = on ? 'block' : 'none';
-  if (on) { initProvinceSelect(); buildZtTimeSelect('pp-zt-hour','pp-zt-min'); }
+  if (on) { initProvinceSelect(); buildZtTimeSelect('pp-zt-hour','pp-zt-min'); syncZtToShichen(); }
 }
 
 function setLocMode(mode) {
@@ -3883,8 +3900,8 @@ function updateZtHint() {
 }
 
 // 监听城市和经度变化
-document.getElementById('pp-city').addEventListener('change', updateZtHint);
-document.getElementById('pp-longitude').addEventListener('input', updateZtHint);
+document.getElementById('pp-city').addEventListener('change', () => { updateZtHint(); if(useZhenTaiyang) syncZtToShichen(); });
+document.getElementById('pp-longitude').addEventListener('input', () => { updateZtHint(); if(useZhenTaiyang) syncZtToShichen(); });
 
 function setCalType(type) {
   currentCalType = type;
@@ -3948,6 +3965,7 @@ function setHpZt(side, on) {
     if (sel.options.length <= 1) {
       Object.keys(CITY_LNG).forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
     }
+    syncHpZtToShichen(side);
   }
 }
 
@@ -3959,6 +3977,36 @@ function setHpLocMode(side, mode) {
   document.getElementById(`hp-${side}-zt-os`).style.display = mode === 'os' ? 'flex' : 'none';
 }
 
+function syncHpZtToShichen(side) {
+  const hh = parseInt(document.getElementById(`hp-${side}-zt-hour`).value) || 0;
+  const mm = parseInt(document.getElementById(`hp-${side}-zt-min`).value) || 0;
+  const lng = getHpLng(side);
+  let correctedHH = hh;
+  if (lng !== null) {
+    const correctedMin = hh * 60 + mm + Math.round(calcZtCorrection(lng));
+    correctedHH = ((Math.floor(correctedMin / 60) % 24) + 24) % 24;
+  }
+  let idx = 0;
+  if (correctedHH >= 23 || correctedHH < 1) idx = 0;
+  else { for (let i = 1; i < HOURS.length; i++) { if (correctedHH >= HOURS[i].val && correctedHH < HOURS[i].val + 2) { idx = i; break; } } }
+  document.getElementById(`hp-${side}-hour`).value = idx;
+}
+
+function syncHpZtToShichen(side) {
+  const hh = parseInt(document.getElementById(`hp-${side}-zt-hour`).value) || 0;
+  const mm = parseInt(document.getElementById(`hp-${side}-zt-min`).value) || 0;
+  const lng = getHpLng(side);
+  let correctedHH = hh;
+  if (lng !== null) {
+    const correctedMin = hh * 60 + mm + Math.round(calcZtCorrection(lng));
+    correctedHH = ((Math.floor(correctedMin / 60) % 24) + 24) % 24;
+  }
+  let idx = 0;
+  if (correctedHH >= 23 || correctedHH < 1) idx = 0;
+  else { for (let i = 1; i < HOURS.length; i++) { if (correctedHH >= HOURS[i].val && correctedHH < HOURS[i].val + 2) { idx = i; break; } } }
+  document.getElementById(`hp-${side}-hour`).value = idx;
+}
+
 function updateHpCitySelect(side) {
   const prov = document.getElementById(`hp-${side}-province`).value;
   const sel = document.getElementById(`hp-${side}-city`);
@@ -3967,6 +4015,7 @@ function updateHpCitySelect(side) {
     Object.keys(CITY_LNG[prov]).forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
   }
   updateHpZtHint(side);
+  if (hpState[side].zt) syncHpZtToShichen(side);
 }
 
 function getHpLng(side) {
@@ -3991,6 +4040,7 @@ function updateHpZtHint(side) {
   } else {
     hint.textContent = '';
   }
+  if (hpState[side].zt) syncHpZtToShichen(side);
 }
 function setHpLeap(side, v) {
   hpState[side].leap = v;
