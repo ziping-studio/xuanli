@@ -4114,7 +4114,7 @@ function doPaipan() {
       // 真太阳时修正导致跨日的处理
       const wasLateZi = isLateZi;
       const nowLateZi = newHourIdx === 12;
-      const crossedMidnight = wasLateZi && correctedHH < 23; // 晚子时修正后过了0点
+      const crossedMidnight = wasLateZi && correctedHH < 5; // 晚子时修正后到了凌晨段（过了0点）
       const crossedBackward = !wasLateZi && correctedMin < 0; // 非晚子时修正后退到前一天
       
       if (crossedBackward) {
