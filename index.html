@@ -5592,7 +5592,7 @@ function renderLiunianForDayun(dyIdx) {
   const gridHtml = liunians.map(ly => {
     const tgCss = WX_CSS[ly.tgWx] || 'earth';
     const dzCss = WX_CSS[ly.dzWx] || 'earth';
-    const age = ly.year - d.input.year + 1;
+    const age = dy.startAge + 1 + (ly.year - startYear);
     return `
       <div class="ly-item${ly.year === currentYear ? ' current-year' : ''}" data-ly-year="${ly.year}" onclick="selectLiunian(${ly.year})">
         <div class="ly-year">${ly.year}</div>
@@ -5631,10 +5631,9 @@ function selectLiunian(year) {
   const pillar = getYearPillar(year);
   const tgWx = TG_WX[pillar.tg];
   const dzWx = DZ_BEN[pillar.dz] || '';
-  const age = year - d.input.year + 1;
-  // 找到该流年所在的大运
   const dyIdx = d.dayuns.findIndex(dy => year >= dy.startYear && year < dy.startYear + 10);
   const dy = dyIdx >= 0 ? d.dayuns[dyIdx] : null;
+  const age = dy ? (dy.startAge + 1 + (year - dy.startYear)) : (year - d.input.year + 1);
   showDayunDetail('流年', pillar.tg, pillar.dz, tgWx, dzWx, `${year}年（${age}岁）`, d.bazi, d.xiji, dy);
 }
 
