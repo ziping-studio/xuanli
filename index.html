@@ -3572,14 +3572,7 @@ function calcHeChongXingHai(bazi) {
       }
     }
   }
-  // 2. 天干七冲
-  for (let i = 0; i < 4; i++) {
-    for (let j = i+1; j < 4; j++) {
-      if (TG_CHONG[tgArr[i]] === tgArr[j]) {
-        result.push({ type:'天干冲', label:`${tgArr[i]}${tgArr[j]}冲`, cols:[i,j], cls:'chong' });
-      }
-    }
-  }
+  // 2. (天干冲已移除，天干只有合和克)
   // 3. 地支六合
   for (let i = 0; i < 4; i++) {
     for (let j = i+1; j < 4; j++) {
