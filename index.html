@@ -1105,7 +1105,21 @@ body {
     <div style="color:var(--text3);font-size:14px">还没有保存的命盘</div>
     <div style="color:var(--text3);font-size:12px;margin-top:6px">排盘后点「保存此命盘」即可添加</div>
   </div>
-  <div style="padding:16px 20px 40px;text-align:center">
+  <div style="padding:16px 20px 10px">
+    <div style="border-top:1px solid var(--border);padding-top:16px">
+      <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:10px">跨设备同步</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px">
+        <button onclick="syncUpload()" style="padding:8px 16px;background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.3);border-radius:8px;color:#4ecdc4;font-size:12px;cursor:pointer">↑ 上传命盘</button>
+        <button onclick="syncDownload()" style="padding:8px 16px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:8px;color:var(--gold);font-size:12px;cursor:pointer">↓ 下载命盘</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;justify-content:center">
+        <span style="font-size:11px;color:var(--text3)">同步码</span>
+        <input id="sync-code-input" class="input-text" type="text" placeholder="输入或自动生成" maxlength="6" style="width:120px;text-align:center;font-size:16px;letter-spacing:4px;text-transform:uppercase">
+      </div>
+      <div id="sync-msg" style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px"></div>
+    </div>
+  </div>
+  <div style="padding:6px 20px 40px;text-align:center">
     <button onclick="closeSavedPanel()" style="padding:10px 40px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:10px;color:var(--gold);font-size:14px;cursor:pointer;letter-spacing:2px">返回排盘</button>
   </div>
 </div>
@@ -4976,6 +4990,108 @@ function showPpInput() {
   document.getElementById('pp-input-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// ===== 跨设备同步（Supabase）=====
+const SUPA_URL = 'https://gsydgkylbhqaykqndopl.supabase.co';
+const SUPA_KEY = 'sb_publishable_MzR0_Odr4mPqW6ad-etQ0Q_aByqdPLB';
+
+function generateSyncCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 去掉易混淆的0OI1
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function syncUpload() {
+  const list = JSON.parse(localStorage.getItem('savedBaziList') || '[]');
+  if (!list.length) { showSyncMsg('没有命盘可上传', false); return; }
+  
+  let code = document.getElementById('sync-code-input').value.trim().toUpperCase();
+  if (!code) {
+    code = generateSyncCode();
+    document.getElementById('sync-code-input').value = code;
+  }
+  if (code.length !== 6) { showSyncMsg('同步码需要6位', false); return; }
+  
+  showSyncMsg('上传中...', true);
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/sync_data?sync_code=eq.${code}`, {
+      method: 'GET',
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const existing = await res.json();
+    
+    const body = { sync_code: code, data: JSON.stringify(list), updated_at: new Date().toISOString() };
+    
+    if (existing.length > 0) {
+      await fetch(`${SUPA_URL}/rest/v1/sync_data?sync_code=eq.${code}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      await fetch(`${SUPA_URL}/rest/v1/sync_data`, {
+        method: 'POST',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    }
+    
+    localStorage.setItem('syncCode', code);
+    showSyncMsg(`上传成功！同步码：${code}（请牢记）`, true);
+  } catch(e) {
+    showSyncMsg('上传失败，请检查网络', false);
+  }
+}
+
+async function syncDownload() {
+  const code = document.getElementById('sync-code-input').value.trim().toUpperCase();
+  if (!code || code.length !== 6) { showSyncMsg('请输入6位同步码', false); return; }
+  
+  showSyncMsg('下载中...', true);
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/sync_data?sync_code=eq.${code}&select=data`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+    });
+    const rows = await res.json();
+    
+    if (!rows.length) { showSyncMsg('同步码不存在，请检查', false); return; }
+    
+    const cloudList = JSON.parse(rows[0].data);
+    const localList = JSON.parse(localStorage.getItem('savedBaziList') || '[]');
+    
+    // 合并：以云端为主，本地有但云端没有的也保留
+    const merged = [...cloudList];
+    localList.forEach(local => {
+      const exists = merged.some(m => 
+        m.input && local.input &&
+        m.input.year === local.input.year && m.input.month === local.input.month && 
+        m.input.day === local.input.day && m.input.hour === local.input.hour
+      );
+      if (!exists) merged.push(local);
+    });
+    
+    localStorage.setItem('savedBaziList', JSON.stringify(merged));
+    localStorage.setItem('syncCode', code);
+    showSyncMsg(`下载成功！共${merged.length}个命盘`, true);
+    renderSavedList();
+    showSavedPanel();
+  } catch(e) {
+    showSyncMsg('下载失败，请检查网络', false);
+  }
+}
+
+function showSyncMsg(msg, ok) {
+  const el = document.getElementById('sync-msg');
+  el.textContent = msg;
+  el.style.color = ok ? '#4ecdc4' : '#f44';
+}
+
+// 打开命盘面板时恢复上次的同步码
+function initSyncCode() {
+  const saved = localStorage.getItem('syncCode');
+  if (saved) document.getElementById('sync-code-input').value = saved;
+}
+
 // ===== 保存命盘 =====
 function saveBazi() {
   if (!AppState.bazi1) return;
@@ -5068,6 +5184,7 @@ function renderSavedOverlay() {
 function showSavedPanel() {
   renderSavedOverlay();
   document.getElementById('saved-overlay').style.display = 'block';
+  initSyncCode();
 }
 
 function closeSavedPanel() {
