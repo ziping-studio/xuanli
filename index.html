@@ -1528,8 +1528,6 @@ function calcDayun(bazi, gender, birthYear, birthMonth, birthDay, birthHour) {
     }
 
     const startAge = startInfo.years + i * 10;
-    // startYear：起运实岁四舍五入（8年11月 ≈ 9年），与传统虚岁显示一致
-    const startYearOffset = startInfo.months >= 6 ? startAge + 1 : startAge;
     dayuns.push({
       tg: TIANGAN[tgIndex],
       dz: DIZHI[dzIndex],
@@ -1537,7 +1535,7 @@ function calcDayun(bazi, gender, birthYear, birthMonth, birthDay, birthHour) {
       dzIndex,
       startAge,
       startMonth: startInfo.months,
-      startYear: birthYear + startYearOffset,
+      startYear: birthYear + startAge,
       tgWx: TG_WUXING[tgIndex],
       dzWx: DZ_WUXING[dzIndex]
     });
