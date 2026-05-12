@@ -1105,21 +1105,17 @@ body {
     <div style="color:var(--text3);font-size:14px">还没有保存的命盘</div>
     <div style="color:var(--text3);font-size:12px;margin-top:6px">排盘后点「保存此命盘」即可添加</div>
   </div>
-  <div style="padding:16px 20px 10px">
-    <div style="border-top:1px solid var(--border);padding-top:16px">
-      <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:10px">跨设备同步</div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px">
-        <button onclick="syncUpload()" style="padding:8px 16px;background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.3);border-radius:8px;color:#4ecdc4;font-size:12px;cursor:pointer">↑ 上传命盘</button>
-        <button onclick="syncDownload()" style="padding:8px 16px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:8px;color:var(--gold);font-size:12px;cursor:pointer">↓ 下载命盘</button>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;justify-content:center">
-        <span style="font-size:11px;color:var(--text3)">同步码</span>
-        <input id="sync-code-input" class="input-text" type="text" placeholder="输入或自动生成" maxlength="6" style="width:120px;text-align:center;font-size:16px;letter-spacing:4px;text-transform:uppercase">
-      </div>
-      <div id="sync-msg" style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px"></div>
+  <div id="sync-area" style="display:none;padding:0 16px 10px">
+    <div style="display:flex;gap:8px;align-items:center;justify-content:center">
+      <input id="sync-code-input" class="input-text" type="text" placeholder="同步码" maxlength="6" style="width:100px;text-align:center;font-size:14px;letter-spacing:3px;text-transform:uppercase;font-weight:600;padding:5px">
+      <button onclick="syncUpload()" style="padding:5px 12px;background:none;border:1px solid rgba(78,205,196,0.25);border-radius:6px;color:#4ecdc4;font-size:11px;cursor:pointer">上传</button>
+      <button onclick="syncDownload()" style="padding:5px 12px;background:none;border:1px solid rgba(201,168,76,0.25);border-radius:6px;color:var(--gold);font-size:11px;cursor:pointer">下载</button>
     </div>
+    <div id="sync-msg" style="font-size:10px;color:var(--text3);text-align:center;margin-top:4px;min-height:14px"></div>
   </div>
-  <div style="padding:6px 20px 40px;text-align:center">
+  <div style="padding:10px 20px 40px;text-align:center">
+    <button onclick="toggleSyncArea()" style="background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;margin-bottom:10px" id="sync-toggle-btn">跨设备同步 ▸</button>
+    <br>
     <button onclick="closeSavedPanel()" style="padding:10px 40px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:10px;color:var(--gold);font-size:14px;cursor:pointer;letter-spacing:2px">返回排盘</button>
   </div>
 </div>
@@ -4990,6 +4986,19 @@ function showPpInput() {
   document.getElementById('pp-input-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function toggleSyncArea() {
+  const area = document.getElementById('sync-area');
+  const btn = document.getElementById('sync-toggle-btn');
+  if (area.style.display === 'none') {
+    area.style.display = 'block';
+    btn.textContent = '收起同步 ▾';
+    initSyncCode();
+  } else {
+    area.style.display = 'none';
+    btn.textContent = '跨设备同步 ▸';
+  }
+}
+
 // ===== 跨设备同步（Supabase）=====
 const SUPA_URL = 'https://gsydgkylbhqaykqndopl.supabase.co';
 const SUPA_KEY = 'sb_publishable_MzR0_Odr4mPqW6ad-etQ0Q_aByqdPLB';
@@ -5037,7 +5046,9 @@ async function syncUpload() {
     }
     
     localStorage.setItem('syncCode', code);
-    showSyncMsg(`上传成功！同步码：${code}（请牢记）`, true);
+    showSyncMsg(`上传成功！同步码：${code}`, true);
+    // 尝试复制到剪贴板
+    try { navigator.clipboard.writeText(code); showSyncMsg(`上传成功！同步码 ${code} 已复制`, true); } catch(e) {}
   } catch(e) {
     showSyncMsg('上传失败，请检查网络', false);
   }
