@@ -1611,9 +1611,19 @@ function calcDayunStartAge(birthYear, birthMonth, birthDay, birthHour, isShun) {
   const totalHours = Math.abs(jieqiMs - birthMs) / (1000 * 60 * 60);
 
   const totalDays  = totalHours / 24;
-  const years      = Math.floor(totalDays / 3);
-  const remainDays = totalDays % 3;
-  const months     = Math.round(remainDays * 4); // 3天=12月，1天=4月
+  // 精确交运日期法：3天折1年(=360天)，即1天折120天
+  // 出生日 + totalDays*120天 = 交运日期，取交运年份
+  const birthDate  = new Date(Date.UTC(birthYear, birthMonth - 1, birthDay, birthHour, 0));
+  const transitMs  = birthDate.getTime() + totalDays * 120 * 86400000;
+  const transitDate = new Date(transitMs);
+  const transitYear = transitDate.getUTCFullYear();
+  const years = transitYear - birthYear;
+  // 计算余月（近似）
+  const transitMonth = transitDate.getUTCMonth(); // 0-based
+  const birthMonthIdx = birthMonth - 1;           // 0-based
+  let months = (transitMonth - birthMonthIdx + 12) % 12;
+  // 如果交运日小于出生日，月份-1
+  if (transitDate.getUTCDate() < birthDay) months = Math.max(0, months - 1);
 
   return { years: Math.max(0, years), months: Math.min(11, months) };
 }
@@ -5202,7 +5212,7 @@ function loadSaved(idx) {
     const prof = item.profile || {};
     if (inp && inp.year && inp.month && inp.day !== undefined) {
       // 用保存的公历信息重新排盘（使用最新分析逻辑）
-      const raw = paipan(inp.year, inp.month, inp.day, inp.hour || 12, prof.gender || '男');
+      const raw = paipan(inp.year, inp.month, inp.day, inp.hour != null ? inp.hour : 12, prof.gender || '男');
       const qr = calcQiangRuo(raw);
       const gejvInfo = calcGejv(raw);
       const xijiResult = calcXiJi(raw, raw.dayMasterWx, qr.isQiang, qr.ratio, gejvInfo);
@@ -5544,7 +5554,7 @@ function renderDayun() {
 
   const gender = AppState.profile1?.gender || input.gender || '男';
   const { isShun, dayuns, startAge, startMonth } = calcDayun(
-    bazi, gender, input.year, input.month, input.day, input.hour || 12
+    bazi, gender, input.year, input.month, input.day, input.hour != null ? input.hour : 12
   );
   const currentYear = new Date().getFullYear();
   const currentAge = currentYear - input.year;
@@ -5555,7 +5565,7 @@ function renderDayun() {
   const xiji = calcXiJi(bazi, bazi.dayMasterWx, qr.isQiang, qr.ratio, gejvInfo);
 
   document.getElementById('dayun-info').textContent =
-    `${isShun ? '顺行' : '逆行'}大运，${startAge}岁${startMonth > 0 ? startMonth + '个月' : ''}起运`;
+    `${isShun ? '顺行' : '逆行'}大运，${startAge + 1}岁${startMonth > 0 ? startMonth + '个月' : ''}起运`;
 
   document.getElementById('dayun-grid').innerHTML = dayuns.map((d, i) => {
     const tgCss = WX_CSS[d.tgWx] || 'earth';
